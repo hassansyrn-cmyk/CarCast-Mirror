@@ -2,40 +2,18 @@
 
 ## User-facing identity
 
-- **App name:** CarCast Mirror
-- **Tagline:** SECURE LOCAL CASTING
-- **Primary accent:** `#35D7C4`
-- **Dark background:** `#071014`
-- **Secondary surface:** `#101C22`
+**CarCast Mirror** uses the tagline **SECURE LOCAL CASTING**. The premium dark-utility interface keeps the familiar teal accent (`#35D7C4`) and navy background (`#071014`), with `#101C22` cards, `#17272F` raised surfaces, and `#AABCC1` secondary text. A clear section hierarchy, 4/8 dp spacing, high-contrast labels, and horizontally scrollable route navigation keep the layout composed on narrow phones.
 
-The app name is centralized in `app/src/main/res/values/strings.xml` and is used by the Android application label, launcher, Compose brand mark, splash transition, and foreground-service notification titles.
+The app name and tagline remain centralized in `app/src/main/res/values/strings.xml`.
 
 ## Launcher icon
 
-The original CarCast symbol combines a phone/display outline with wireless casting arcs. It contains no text and does not copy Google Cast, Chromecast, Android Auto, or vehicle branding.
+The refreshed no-text mark pairs a phone silhouette with a separate display frame and two cast arcs. Editable vector sources are `design/branding/carcast-icon-foreground.svg` and `design/branding/carcast-icon-master.svg`; their high-resolution PNG counterparts are `design/branding/carcast-icon-foreground.png` and `design/branding/carcast-icon-master.png`.
 
-- Master artwork: `design/branding/carcast-icon-master.png`
-- Transparent foreground artwork: `design/branding/carcast-icon-foreground.png`
-- Adaptive background: `app/src/main/res/drawable/carcast_icon_background.xml`
-- Android 13+ themed layer: `app/src/main/res/drawable/carcast_icon_monochrome.xml`
-- Adaptive resources: `app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml`
-- Legacy density resources: `app/src/main/res/mipmap-*dpi/ic_launcher*.png`
-
-The manifest references `@mipmap/ic_launcher` and `@mipmap/ic_launcher_round`, with the app label set to `@string/app_name`.
-
-## Splash and in-app mark
-
-The app uses AndroidX SplashScreen rather than a fake startup activity. The splash uses the CarCast symbol on the brand navy background and transitions to the Compose home screen. The home header uses the same reusable symbol plus the centralized app name and tagline.
+Android uses the vector foreground at `app/src/main/res/drawable/carcast_icon_foreground.xml`, with the adaptive background in `app/src/main/res/drawable/carcast_icon_background.xml` and the themed monochrome layer in `app/src/main/res/drawable/carcast_icon_monochrome.xml`. Existing adaptive launcher references and legacy density resource names are unchanged; the same foreground vector is used by the AndroidX splash screen and in-app brand mark.
 
 ## Visual review previews
 
-The deterministic preview set is stored under `design/branding/previews/`:
+The refreshed deterministic previews are `design/branding/previews/01-launcher-icon.png`, `02-adaptive-circular-icon.png`, `03-adaptive-rounded-square-icon.png`, `04-themed-monochrome-icon.png`, `05-splash-screen.png`, and `06-home-screen-branding.png`.
 
-1. `01-launcher-icon.png`
-2. `02-adaptive-circular-icon.png`
-3. `03-adaptive-rounded-square-icon.png`
-4. `04-themed-monochrome-icon.png`
-5. `05-splash-screen.png`
-6. `06-home-screen-branding.png`
-
-These are design previews. Final device appearance should be confirmed after installing the debug APK on a physical Android launcher, including OEM adaptive masks and Android 13 themed icons.
+These are design previews, not device screenshots. Confirm adaptive masks, themed icons, safe areas, and large text on a physical Android device before release.

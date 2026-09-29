@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108" fill="none" role="img" aria-label="CarCast Mirror phone-to-display casting symbol">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 24h28c4.4 0 8 3.6 8 8v30c0 4.4-3.6 8-8 8h-10M68 70v8m-8 3h16" stroke="#35D7C4" stroke-width="4.2"/>
+    <path d="M57 49c7 2 12 6.8 14 14M57 58c3.2 1 5.2 3.2 6.2 6.4" stroke="#08CFE0" stroke-width="4.2"/>
+    <rect x="20" y="32" width="34" height="54" rx="8" stroke="#35D7C4" stroke-width="4.2"/>
+    <path d="M33 38h8" stroke="#08CFE0" stroke-width="2.8"/>
+  </g>
+</svg>
