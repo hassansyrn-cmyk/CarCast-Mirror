@@ -20,14 +20,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import android.view.SurfaceView
 import com.carcast.mirror.discovery.*
 import com.carcast.mirror.service.*
 import com.carcast.mirror.core.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.graphics.Bitmap
@@ -61,6 +69,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     override fun onCreate(state: Bundle?) {
+        installSplashScreen()
         super.onCreate(state)
         DebugDiagnostics.init(this)
         val prior = Thread.getDefaultUncaughtExceptionHandler()
@@ -89,7 +98,7 @@ class MainActivity : ComponentActivity() {
         DisposableEffect(mode, localGranted) { if (mode == "cast" && localGranted) { scanning = true; discovery.start { receivers = it } }; onDispose { discovery.stop() } }
         MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF35D7C4), background = Color(0xFF071014), surface = Color(0xFF101C22))) {
             Surface(Modifier.fillMaxSize(), color = Color(0xFF071014)) { Column((Modifier.fillMaxSize().padding(22.dp)).then(if (mode == "cast") Modifier else Modifier.verticalScroll(rememberScrollState()))) {
-                Text("CarCast Mirror", style = MaterialTheme.typography.headlineMedium, color = Color.White); Text("SECURE LOCAL CASTING", style = MaterialTheme.typography.labelSmall, color = Color(0xFF35D7C4)); Spacer(Modifier.height(20.dp))
+                BrandMark(); Spacer(Modifier.height(20.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("cast" to "Cast screen", "receive" to "Receive", "browser" to "Browser", "car" to "Car mode", "diag" to "Diagnostics").forEach { (id, label) -> FilterChip(selected = mode == id, onClick = { mode = id }, label = { Text(label) }) } }
                 Spacer(Modifier.height(18.dp))
                 when (mode) {
@@ -103,6 +112,17 @@ class MainActivity : ComponentActivity() {
         }
         if (showPin != null) AlertDialog(onDismissRequest = { showPin = null }, title = { Text("Confirm pairing code") }, text = { Column { Text("Enter the temporary six-digit code shown on the receiver."); Spacer(Modifier.height(8.dp)); OutlinedTextField(value = pin, onValueChange = { pin = it.filter(Char::isDigit).take(6) }, label = { Text("Pairing code") }) } }, confirmButton = { TextButton(enabled = pin.length == 6, onClick = { selected = showPin; selectedPin = pin; showPin = null; projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent()) }) { Text("Continue") } }, dismissButton = { TextButton(onClick = { showPin = null }) { Text("Cancel") } })
         if (manual) ManualConnectDialog(onDismiss = { manual = false }, onConnect = { host, port, code -> selected = DiscoveredReceiver("Manual receiver", java.net.InetAddress.getByName(host), port); selectedPin = code; manual = false; projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent()) })
+    }
+    @Composable private fun BrandMark() {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF071014))) {
+                Image(painterResource(com.carcast.mirror.R.drawable.carcast_icon_foreground), contentDescription = stringResource(com.carcast.mirror.R.string.app_name), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
+            Column {
+                Text(stringResource(com.carcast.mirror.R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = Color.White)
+                Text(stringResource(com.carcast.mirror.R.string.brand_tagline), style = MaterialTheme.typography.labelSmall, color = Color(0xFF35D7C4))
+            }
+        }
     }
     @Composable private fun ManualConnectDialog(onDismiss: () -> Unit, onConnect: (String, Int, String) -> Unit) { var host by remember { mutableStateOf("") }; var port by remember { mutableStateOf("49152") }; var code by remember { mutableStateOf("") }; AlertDialog(onDismissRequest = onDismiss, title = { Text("Manual receiver") }, text = { Column { OutlinedTextField(host, { host = it }, label = { Text("IP address") }); OutlinedTextField(port, { port = it.filter(Char::isDigit) }, label = { Text("Port") }); OutlinedTextField(code, { code = it.filter(Char::isDigit).take(6) }, label = { Text("Pairing code") }) } }, confirmButton = { TextButton(enabled = host.isNotBlank() && code.length == 6, onClick = { onConnect(host, port.toIntOrNull() ?: 49152, code) }) { Text("Continue") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }) }
 }
