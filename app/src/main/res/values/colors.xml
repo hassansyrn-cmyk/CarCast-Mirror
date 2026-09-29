@@ -1,5 +1,6 @@
 <resources>
     <color name="brand_navy">#071014</color>
+    <color name="brand_icon_background">#010D23</color>
     <color name="brand_graphite">#101C22</color>
     <color name="brand_cyan">#35D7C4</color>
     <color name="brand_turquoise">#13AFA8</color>
