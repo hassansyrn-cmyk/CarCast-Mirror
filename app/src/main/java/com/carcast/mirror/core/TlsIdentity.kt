@@ -1,0 +1,33 @@
+package com.carcast.mirror.core
+
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import java.math.BigInteger
+import java.net.InetSocketAddress
+import java.security.*
+import java.security.cert.X509Certificate
+import java.util.Date
+import javax.net.ssl.*
+
+object TlsIdentity {
+    init { if (Security.getProvider("BC") == null) Security.addProvider(BouncyCastleProvider()) }
+    data class ServerIdentity(val context: SSLContext, val sas: String)
+    fun serverIdentity(): ServerIdentity {
+        val kp = KeyPairGenerator.getInstance("RSA", "BC").apply { initialize(2048) }.generateKeyPair()
+        val now = Date(); val cert = JcaX509v3CertificateBuilder(X500Name("CN=CarCast ephemeral"), BigInteger(64, SecureRandom()), now, Date(now.time + 120_000), X500Name("CN=CarCast ephemeral"), kp.public).build(JcaContentSignerBuilder("SHA256withRSA").setProvider("BC").build(kp.private)).let { JcaX509CertificateConverter().setProvider("BC").getCertificate(it) }
+        val store = KeyStore.getInstance("JKS").apply { load(null, null); setKeyEntry("carcast", kp.private, CharArray(0), arrayOf(cert)) }
+        val km = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(store, CharArray(0)) }
+        return ServerIdentity(SSLContext.getInstance("TLSv1.3").apply { init(km.keyManagers, null, SecureRandom()) }, sas(cert))
+    }
+    fun serverSocket(identity: ServerIdentity): SSLServerSocket { return identity.context.serverSocketFactory.createServerSocket(0) as SSLServerSocket }
+    fun clientSocket(host: String, port: Int): SSLSocket {
+        val trust = arrayOf<TrustManager>(object : X509TrustManager { override fun getAcceptedIssuers() = arrayOf<X509Certificate>(); override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}; override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {} })
+        val context = SSLContext.getInstance("TLSv1.3").apply { init(null, trust, SecureRandom()) }
+        return (context.socketFactory.createSocket() as SSLSocket).apply { connect(InetSocketAddress(host, port), 15_000); startHandshake() }
+    }
+    fun sas(certificate: java.security.cert.Certificate): String { val digest = MessageDigest.getInstance("SHA-256").digest(certificate.encoded); val n = ((digest[0].toInt() and 0xff) shl 16) or ((digest[1].toInt() and 0xff) shl 8) or (digest[2].toInt() and 0xff); return "%06d".format(n % 1_000_000) }
+}
