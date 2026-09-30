@@ -77,6 +77,7 @@ object DebugDiagnostics {
     }
 
     fun clear() { prefs?.edit()?.remove(KEY_REPORT)?.apply(); AppState.setDebug(BrowserDebugReport()) }
+    fun beginSession() { clear() }
     fun report(): String = AppState.debug.value.asText()
 
     private fun save(report: BrowserDebugReport) {

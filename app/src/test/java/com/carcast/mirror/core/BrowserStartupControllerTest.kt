@@ -32,4 +32,16 @@ class BrowserStartupControllerTest {
         assertEquals(BrowserUiState(), AppState.browser.value)
         assertEquals(LiveDiagnostics(), AppState.diagnostics.value)
     }
+
+    @Test fun failureKeepsDiagnosticsButInvalidatesObsoleteBrowserEndpoint() {
+        AppState.browser { it.copy(status = BrowserStatus.CONNECTED, address = "192.168.1.10", httpPort = 4000, signalPort = 4001, remoteAddress = "192.168.1.20") }
+        AppState.diagnostics { it.copy(state = "DISCONNECTED", iceState = "FAILED", qualityLimitationReason = "bandwidth") }
+        AppState.failBrowserReceiver("Wi-Fi connection changed — tap Reconnect")
+        assertEquals(BrowserStatus.FAILED, AppState.browser.value.status)
+        assertEquals("", AppState.browser.value.address)
+        assertEquals(0, AppState.browser.value.httpPort)
+        assertEquals("DISCONNECTED", AppState.diagnostics.value.state)
+        assertEquals("FAILED", AppState.diagnostics.value.iceState)
+        assertEquals("bandwidth", AppState.diagnostics.value.qualityLimitationReason)
+    }
 }

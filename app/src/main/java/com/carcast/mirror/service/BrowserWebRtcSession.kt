@@ -37,6 +37,13 @@ class BrowserWebRtcSession(private val context: Context, private val send: (Stri
     private var qualityMode = BrowserQualityMode.AUTO
     private var appliedMode = BrowserQualityMode.HD
     private var adaptation = QualityAdaptationState()
+    private var lastPeerState = PeerConnection.PeerConnectionState.NEW
+    private var lastIceState = PeerConnection.IceConnectionState.NEW
+    private val recoveryTimeout = Runnable {
+        if (!stopped && (lastPeerState == PeerConnection.PeerConnectionState.DISCONNECTED || lastIceState == PeerConnection.IceConnectionState.DISCONNECTED)) {
+            fail("WEBRTC_RECOVERY_TIMEOUT", IllegalStateException("TV connection did not recover"))
+        }
+    }
 
     init {
         PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(context).setEnableInternalTracer(false).createInitializationOptions())
@@ -131,8 +138,24 @@ class BrowserWebRtcSession(private val context: Context, private val send: (Stri
 
     private fun observer() = object : PeerConnection.Observer {
         override fun onIceCandidate(c: IceCandidate) { send(JSONObject().put("type", "candidate").put("sdpMid", c.sdpMid).put("sdpMLineIndex", c.sdpMLineIndex).put("candidate", c.sdp).toString()) }
-        override fun onConnectionChange(state: PeerConnection.PeerConnectionState) { AppState.browser { it.copy(status = when (state) { PeerConnection.PeerConnectionState.CONNECTED -> BrowserStatus.CONNECTED; PeerConnection.PeerConnectionState.FAILED -> BrowserStatus.FAILED; else -> it.status }) }; AppState.diagnostics { it.copy(state = state.name, protocol = "WebRTC browser") } }
-        override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) { if (state == PeerConnection.IceConnectionState.CHECKING) DebugDiagnostics.stage(STAGE_ICE_CONNECTING); if (state == PeerConnection.IceConnectionState.CONNECTED || state == PeerConnection.IceConnectionState.COMPLETED) DebugDiagnostics.stage(STAGE_ICE_CONNECTED); AppState.diagnostics { it.copy(iceState = state.name) } }
+        override fun onConnectionChange(state: PeerConnection.PeerConnectionState) {
+            lastPeerState = state
+            when (state) {
+                PeerConnection.PeerConnectionState.CONNECTED -> { statsHandler.removeCallbacks(recoveryTimeout); AppState.browser { it.copy(status = BrowserStatus.CONNECTED, error = null) } }
+                PeerConnection.PeerConnectionState.DISCONNECTED -> { AppState.browser { it.copy(status = BrowserStatus.NEGOTIATING, error = "Connection interrupted — trying to recover") }; statsHandler.removeCallbacks(recoveryTimeout); statsHandler.postDelayed(recoveryTimeout, 8_000) }
+                PeerConnection.PeerConnectionState.FAILED -> fail("WEBRTC_CONNECTION", IllegalStateException("TV connection failed"))
+                else -> AppState.browser { it.copy(status = BrowserStatus.NEGOTIATING) }
+            }
+            AppState.diagnostics { it.copy(state = state.name, protocol = "WebRTC browser") }
+        }
+        override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
+            lastIceState = state
+            if (state == PeerConnection.IceConnectionState.CHECKING) DebugDiagnostics.stage(STAGE_ICE_CONNECTING)
+            if (state == PeerConnection.IceConnectionState.CONNECTED || state == PeerConnection.IceConnectionState.COMPLETED) { DebugDiagnostics.stage(STAGE_ICE_CONNECTED); statsHandler.removeCallbacks(recoveryTimeout) }
+            if (state == PeerConnection.IceConnectionState.DISCONNECTED) { AppState.browser { it.copy(status = BrowserStatus.NEGOTIATING, error = "Connection interrupted — trying to recover") }; statsHandler.removeCallbacks(recoveryTimeout); statsHandler.postDelayed(recoveryTimeout, 8_000) }
+            if (state == PeerConnection.IceConnectionState.FAILED) fail("ICE_CONNECTION", IllegalStateException("TV ICE connection failed"))
+            AppState.diagnostics { it.copy(iceState = state.name) }
+        }
         override fun onSignalingChange(p0: PeerConnection.SignalingState) {}
         override fun onIceConnectionReceivingChange(p0: Boolean) {}
         override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState) {}

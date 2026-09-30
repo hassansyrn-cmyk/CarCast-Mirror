@@ -25,5 +25,5 @@ object AppState {
     fun setDebug(report: BrowserDebugReport) { _debug.value = report }
     fun audio(update: (AudioUiState) -> AudioUiState) { _audio.value = update(_audio.value) }
     fun resetBrowserReceiverState() { _browser.value = BrowserUiState(); _diagnostics.value = LiveDiagnostics() }
-    fun failBrowserReceiver(message: String) { _browser.value = BrowserUiState(status = BrowserStatus.FAILED, error = message); _diagnostics.value = LiveDiagnostics() }
+    fun failBrowserReceiver(message: String) { _browser.value = _browser.value.copy(status = BrowserStatus.FAILED, address = "", httpPort = 0, signalPort = 0, remoteAddress = null, browserUserAgent = null, sessionStartedAtMs = null, error = message) }
 }

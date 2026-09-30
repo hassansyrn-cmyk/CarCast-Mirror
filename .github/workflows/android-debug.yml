@@ -2,9 +2,9 @@ name: Android Debug APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'ui/**', 'stability/**' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'ui/**', 'stability/**' ]
   workflow_dispatch:
 
 permissions:

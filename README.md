@@ -46,3 +46,7 @@ The Browser approval lifecycle now carries a unique `browserSessionId` and has a
 ## Branding
 
 The Android application is branded consistently as **CarCast Mirror**. The launcher uses an original adaptive phone-and-casting symbol with standard and round masks plus an Android 13 monochrome layer. The modern AndroidX SplashScreen uses the same symbol, and the Compose home header reuses the centralized brand mark, name, tagline, and navy/cyan color tokens. See [BRANDING.md](BRANDING.md) and the visual review previews in `design/branding/previews/`.
+
+## Premium UI stability milestone
+
+The premium visual refresh is preserved as the base of the current development branch. Browser disconnects and Wi-Fi changes now surface a clear reconnect action, stale receiver URLs are invalidated on failure, diagnostics remain available after a failure, and each new session starts with clean diagnostics. WebRTC transient disconnects receive an eight-second recovery window before the app reports failure. The normal quality menu is simplified to Auto, Smooth, and High Quality while still prioritizing 30 FPS internally.

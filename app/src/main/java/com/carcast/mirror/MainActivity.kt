@@ -529,13 +529,12 @@ class MainActivity : ComponentActivity() {
                 browserState.status == BrowserStatus.FAILED -> {
                     SurfaceCard {
                         StatusBadge("NEEDS ATTENTION", MaterialTheme.colorScheme.error, CarCastPalette.errorSurface)
-                        Text("Browser Receiver failed to start", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
-                        Text(browserState.error ?: "Unknown startup error", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(
-                            onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java)) },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        ) { Text("Retry") }
+                        Text(if (browserState.error?.contains("disconnected", true) == true || browserState.error?.contains("Wi-Fi", true) == true) "Connection lost" else "Couldn’t connect", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                        Text(browserState.error ?: "Try reconnecting to the TV browser.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Reconnect") }
+                            OutlinedButton(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_STOP)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Stop Casting") }
+                        }
                     }
                 }
                 browserState.status in setOf(BrowserStatus.WAITING_FOR_BROWSER, BrowserStatus.APPROVAL_REQUIRED, BrowserStatus.NEGOTIATING, BrowserStatus.CONNECTED) -> {
@@ -578,11 +577,11 @@ class MainActivity : ComponentActivity() {
                     onClick = { onQualityOpenChange(true) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text("Selected profile: ${browserState.qualityMode.name.replace('_', ' ')}") }
+                ) { Text("Quality: ${when (browserState.qualityMode) { BrowserQualityMode.AUTO -> "Auto"; BrowserQualityMode.LOW_LATENCY -> "Smooth"; BrowserQualityMode.FULL_HD -> "High Quality"; BrowserQualityMode.HD -> "Smooth" }}") }
                 DropdownMenu(expanded = qualityOpen, onDismissRequest = { onQualityOpenChange(false) }) {
-                    BrowserQualityMode.values().forEach { qualityMode ->
+                    listOf(BrowserQualityMode.AUTO to "Auto", BrowserQualityMode.LOW_LATENCY to "Smooth", BrowserQualityMode.FULL_HD to "High Quality").forEach { (qualityMode, label) ->
                         DropdownMenuItem(
-                            text = { Text(qualityMode.name.replace('_', ' ')) },
+                            text = { Text(label) },
                             onClick = {
                                 onQualityOpenChange(false)
                                 startService(Intent(this@MainActivity, BrowserReceiverService::class.java)
