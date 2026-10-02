@@ -19,6 +19,7 @@ class DiscoveryManager(context: Context) {
                 nsd.resolveService(info, object : NsdManager.ResolveListener {
                     override fun onResolveFailed(service: NsdServiceInfo, errorCode: Int) {}
                     override fun onServiceResolved(service: NsdServiceInfo) {
+                        if (service.attributes["protocol"]?.toString(Charsets.UTF_8) != "native-webrtc-v1") return
                         val sessionId = service.attributes["session"]?.toString(Charsets.UTF_8)
                         val capabilities = service.attributes["capabilities"]?.toString(Charsets.UTF_8) ?: ""
                         val item = DiscoveredReceiver(service.serviceName, service.host, service.port, sessionId, capabilities)

@@ -48,6 +48,7 @@ import android.view.SurfaceView
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import kotlinx.coroutines.delay
+import org.webrtc.SurfaceViewRenderer
 
 private object CarCastPalette {
     val background = Color(0xFF071014)
@@ -96,7 +97,19 @@ class MainActivity : ComponentActivity() {
     private var selectedPin = ""
     private var browserApproval = false
     private var audioPermissionRequested = false
-    private val projection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -> if (result.resultCode == Activity.RESULT_OK && result.data != null && selected != null) startForegroundService(MirroringService.startIntent(this, result.resultCode, result.data!!, selected!!.host.hostAddress!!, selected!!.port, selectedPin)) }
+    private var nativeAudioPermissionRequested = false
+    private val projection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null && selected != null) {
+            val target = selected!!
+            ContextCompat.startForegroundService(this, Intent(this, NativeWebRtcSenderService::class.java)
+                .putExtra(NativeWebRtcSenderService.EXTRA_PROJECTION_RESULT, result.resultCode)
+                .putExtra(NativeWebRtcSenderService.EXTRA_PROJECTION_DATA, result.data)
+                .putExtra(NativeWebRtcSenderService.EXTRA_HOST, target.host.hostAddress)
+                .putExtra(NativeWebRtcSenderService.EXTRA_PORT, target.port)
+                .putExtra(NativeWebRtcSenderService.EXTRA_SAS, selectedPin)
+                .putExtra(NativeWebRtcSenderService.EXTRA_SENDER_NAME, "CarCast phone"))
+        }
+    }
     private val browserProjection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             ProjectionLifecycle.consentResult()
@@ -135,6 +148,7 @@ class MainActivity : ComponentActivity() {
             else AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
             launchBrowserProjection()
         }
+        if (requestCode == 44) launchNativeProjection()
     }
 
     private fun launchBrowserProjection() {
@@ -155,6 +169,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun launchNativeProjection() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && AppState.audio.value.enabled && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && !nativeAudioPermissionRequested) {
+            nativeAudioPermissionRequested = true
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 44)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && AppState.audio.value.enabled && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
+        projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent())
+    }
+
     @Composable
     private fun CarCastApp() {
         var mode by remember { mutableStateOf("cast") }
@@ -167,6 +191,7 @@ class MainActivity : ComponentActivity() {
         var qualityOpen by remember { mutableStateOf(false) }
         val browserState by AppState.browser.collectAsStateWithLifecycle()
         val receiverState by AppState.receiver.collectAsStateWithLifecycle()
+        val nativeReceiver by AppState.nativeReceiver.collectAsStateWithLifecycle()
         val diagnostics by AppState.diagnostics.collectAsStateWithLifecycle()
         val debug by AppState.debug.collectAsStateWithLifecycle()
         val audio by AppState.audio.collectAsStateWithLifecycle()
@@ -215,12 +240,16 @@ class MainActivity : ComponentActivity() {
                         when (mode) {
                             "receive" -> ReceiveScreen(
                                 receiverState = receiverState,
+                                nativeReceiver = nativeReceiver,
                                 localGranted = localGranted,
                                 modifier = scrollable,
                                 onStart = {
-                                    if (localGranted) startService(Intent(this@MainActivity, ReceiverService::class.java))
+                                    if (localGranted) startService(Intent(this@MainActivity, NativeReceiverWebRtcService::class.java))
                                     else requestLocalNetwork()
-                                }
+                                },
+                                onApprove = { startService(Intent(this@MainActivity, NativeReceiverWebRtcService::class.java).setAction(NativeReceiverWebRtcService.ACTION_APPROVE)) },
+                                onDecline = { startService(Intent(this@MainActivity, NativeReceiverWebRtcService::class.java).setAction(NativeReceiverWebRtcService.ACTION_DECLINE)) },
+                                onStop = { startService(Intent(this@MainActivity, NativeReceiverWebRtcService::class.java).setAction(NativeReceiverWebRtcService.ACTION_STOP)) }
                             )
                             "browser" -> BrowserScreen(
                                 browserState = browserState,
@@ -273,7 +302,7 @@ class MainActivity : ComponentActivity() {
                             selected = showPin
                             selectedPin = pin
                             showPin = null
-                            projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent())
+                            launchNativeProjection()
                         }
                     ) { Text("Continue") }
                 },
@@ -288,7 +317,7 @@ class MainActivity : ComponentActivity() {
                     selected = DiscoveredReceiver("Manual receiver", java.net.InetAddress.getByName(host), port)
                     selectedPin = code
                     manual = false
-                    projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent())
+                    launchNativeProjection()
                 }
             )
         }
@@ -405,20 +434,11 @@ class MainActivity : ComponentActivity() {
                     shape = RoundedCornerShape(16.dp)
                 ) { Text(if (scanning) "Scan again" else "Scan for displays", fontWeight = FontWeight.SemiBold) }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(
-                        onClick = onManualConnect,
-                        modifier = Modifier.weight(1f).heightIn(min = 50.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
-                    ) { Text("Manual connect", textAlign = TextAlign.Center) }
-                    OutlinedButton(
-                        onClick = onSystemCast,
-                        modifier = Modifier.weight(1f).heightIn(min = 50.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
-                    ) { Text("System Cast", textAlign = TextAlign.Center) }
-                }
+                OutlinedButton(
+                    onClick = onSystemCast,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) { Text("Use Android System Cast", textAlign = TextAlign.Center) }
             }
         }
     }
@@ -454,9 +474,9 @@ class MainActivity : ComponentActivity() {
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(target.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text("${target.protocol} · ${target.host.hostAddress}:${target.port}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (nativeReceiver) "CarCast Receiver · Available on local network" else "${target.protocol} · Media only", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        if (target.protocol == "DLNA") "MEDIA ONLY — not full-screen mirroring" else "Pairing code is shown on the receiver",
+                        if (target.protocol == "DLNA") "MEDIA ONLY — not full-screen mirroring" else "Secure approval required on receiver",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (target.protocol == "DLNA") MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                     )
@@ -466,41 +486,46 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ReceiveScreen(receiverState: ReceiverUiState, localGranted: Boolean, modifier: Modifier, onStart: () -> Unit) {
+    private fun ReceiveScreen(receiverState: ReceiverUiState, nativeReceiver: NativeReceiverMetrics, localGranted: Boolean, modifier: Modifier, onStart: () -> Unit, onApprove: () -> Unit, onDecline: () -> Unit, onStop: () -> Unit) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading("CarCast Receiver", "Receive a secure, direct stream from another device.")
+            PageHeading(receiverState.friendlyName, "Ready to receive from a nearby CarCast phone.")
             SurfaceCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Receiver status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("CarCast Receiver", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     StatusBadge(receiverState.status.uppercase())
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Text("Pairing code", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    receiverState.pairingCode?.chunked(3)?.joinToString(" ") ?: "Start receiver",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 2.sp
-                )
-                Text("SAS valid for this receiver TLS session", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Text("Keep this screen open and select this receiver from the sender phone.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Same Wi-Fi required", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             Surface(
-                modifier = Modifier.fillMaxWidth().height(220.dp),
+                modifier = Modifier.fillMaxWidth().height(300.dp),
                 shape = RoundedCornerShape(20.dp),
                 color = Color.Black,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 AndroidView(
-                    factory = { context -> SurfaceView(context).also { ReceiverSurfaceHolder.attach(it.holder) } },
+                    factory = { context -> SurfaceViewRenderer(context).also { NativeReceiverRenderer.attach(it) } },
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            Button(
-                onClick = onStart,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) { Text("Start receiver", fontWeight = FontWeight.SemiBold) }
+            if (receiverState.pendingSender != null) {
+                SurfaceCard {
+                    StatusBadge("APPROVAL REQUIRED", MaterialTheme.colorScheme.tertiary, CarCastPalette.warningSurface)
+                    Text("${receiverState.pendingSender} wants to cast", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("Confirm that both screens show the same verification code:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(receiverState.pendingSas?.chunked(3)?.joinToString(" ") ?: "------", style = MaterialTheme.typography.headlineMedium, letterSpacing = 3.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = onApprove, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text("CONNECT") }
+                        OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text("DECLINE") }
+                    }
+                }
+            } else if (!receiverState.active || receiverState.status == "Stopped" || receiverState.status == "Failed") {
+                Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text("Start receiver", fontWeight = FontWeight.SemiBold) }
+            } else if (receiverState.status == "Connected") {
+                Text("Connected · ${nativeReceiver.audioTrackStatus}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                OutlinedButton(onClick = onStop, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text("Stop receiver") }
+            }
         }
     }
 
