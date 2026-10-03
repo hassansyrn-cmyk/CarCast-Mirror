@@ -90,9 +90,9 @@ private fun carCastColorScheme() = darkColorScheme(
 )
 
 class MainActivity : ComponentActivity() {
-    private val localNetworkPermission = "android.permission.ACCESS_LOCAL_NETWORK"
-    private fun localNetworkGranted() = Build.VERSION.SDK_INT < 37 || checkSelfPermission(localNetworkPermission) == PackageManager.PERMISSION_GRANTED
-    private fun requestLocalNetwork() { if (Build.VERSION.SDK_INT >= 37) requestPermissions(arrayOf(localNetworkPermission), 42) }
+    // Target SDK 36 uses INTERNET for local-network access. ACCESS_LOCAL_NETWORK is an Android 17/SDK 37 path.
+    private fun localNetworkGranted() = true
+    private fun requestLocalNetwork() { /* The current target does not require a separate local-network prompt. */ }
     private var selected: DiscoveredReceiver? = null
     private var selectedPin = ""
     private var browserApproval = false
@@ -142,7 +142,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 42) recreate()
         if (requestCode == 43) {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) AppState.audio { it.copy(status = "Audio: Initializing") }
             else AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
@@ -262,6 +261,7 @@ class MainActivity : ComponentActivity() {
                                 onLaunchProjection = { launchBrowserProjection() }
                             )
                             "car" -> CarModeScreen(modifier = scrollable)
+                            "help" -> HelpScreen(modifier = scrollable)
                             else -> DiagnosticsScreen(
                                 diagnostics = diagnostics,
                                 debug = debug,
@@ -330,7 +330,8 @@ class MainActivity : ComponentActivity() {
             "receive" to "Receive",
             "browser" to "Browser",
             "car" to "Car mode",
-            "diag" to "Diagnostics"
+            "diag" to "Diagnostics",
+            "help" to "Help"
         )
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -679,6 +680,15 @@ class MainActivity : ComponentActivity() {
             Text("Audio: ${audio.status}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
         }
 
+        SurfaceCard {
+            Text("What will be shared", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "When you approve, CarCast captures your device screen and, if enabled, supported playback audio. It sends the stream only over the encrypted local connection to the receiver you approve; it is not uploaded or stored by CarCast.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
         if (browserState.status == BrowserStatus.APPROVAL_REQUIRED) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = onLaunchProjection, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Approve") }
@@ -718,6 +728,29 @@ class MainActivity : ComponentActivity() {
                 SupportedPath("02", "Android Automotive OS only through an eligible, reviewed parked-app category.")
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SupportedPath("03", "External Miracast or receiver hardware using Android's public system handoff.")
+            }
+        }
+    }
+
+    @Composable
+    private fun HelpScreen(modifier: Modifier) {
+        Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            PageHeading("Help & FAQ", "Private, local casting with clear recovery steps.")
+            SurfaceCard {
+                Text("Why can’t I see a receiver?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Keep the phone and receiver on the same Wi-Fi network. Start the receiver first, then scan again. VPNs, guest Wi-Fi isolation, and captive portals can block local discovery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            SurfaceCard {
+                Text("Why is audio unavailable?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Android playback capture supports eligible media and game audio only. Protected content, DRM-restricted apps, microphone input, and some manufacturer audio paths cannot be captured. Turn off Share device audio to continue video-only.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            SurfaceCard {
+                Text("How do I recover a failed session?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Stop the receiver, close the TV browser tab, reopen the displayed local URL, and start a new session. Each screen-share approval is single-use by Android design.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            SurfaceCard {
+                Text("What does CarCast store?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("CarCast has no account, cloud relay, advertising SDK, or analytics service. Session diagnostics stay in app-private storage until you clear them; media stays on the local connection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

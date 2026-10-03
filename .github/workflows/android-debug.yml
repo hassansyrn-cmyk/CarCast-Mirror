@@ -2,9 +2,9 @@ name: Android Debug APK
 
 on:
   push:
-    branches: [ main, 'ui/**', 'stability/**' ]
+    branches: [ main, 'ui/**', 'stability/**', 'release/**' ]
   pull_request:
-    branches: [ main, 'ui/**', 'stability/**' ]
+    branches: [ main, 'ui/**', 'stability/**', 'release/**' ]
   workflow_dispatch:
 
 permissions:
@@ -37,8 +37,8 @@ jobs:
           packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
           accept-android-sdk-licenses: true
 
-      - name: Build and test debug variant
-        run: ./gradlew clean testDebugUnitTest assembleDebug --no-daemon --stacktrace
+      - name: Build and test debug plus unsigned release bundle
+        run: ./gradlew clean testDebugUnitTest assembleDebug bundleRelease --no-daemon --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -46,5 +46,14 @@ jobs:
         with:
           name: CarCastMirror-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload unsigned release AAB
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: CarCastMirror-release-aab-unsigned
+          path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14

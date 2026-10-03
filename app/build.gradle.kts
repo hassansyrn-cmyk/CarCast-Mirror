@@ -5,8 +5,28 @@ plugins {
 }
 
 android { namespace = "com.carcast.mirror"; compileSdk = 36
-    defaultConfig { applicationId = "com.carcast.mirror"; minSdk = 24; targetSdk = 36; versionCode = 1; versionName = "1.0" }
-    buildTypes { release { isMinifyEnabled = true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") } }
+    defaultConfig { applicationId = "com.carcast.mirror"; minSdk = 24; targetSdk = 36; versionCode = 2; versionName = "0.9.0-beta1" }
+    signingConfigs {
+        val storeFilePath = providers.environmentVariable("CARCAST_RELEASE_STORE_FILE").orNull
+        if (!storeFilePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(storeFilePath)
+                storePassword = providers.environmentVariable("CARCAST_RELEASE_STORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("CARCAST_RELEASE_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("CARCAST_RELEASE_KEY_PASSWORD").orNull
+            }
+        }
+    }
+    buildTypes {
+        debug { isDebuggable = true; isMinifyEnabled = false }
+        release {
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (providers.environmentVariable("CARCAST_RELEASE_STORE_FILE").orNull?.isNotBlank() == true) signingConfig = signingConfigs.getByName("release")
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
