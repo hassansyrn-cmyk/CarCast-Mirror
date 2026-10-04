@@ -10,6 +10,10 @@
 - Release signing secrets are environment-only.
 - R8 rules protect WebRTC/JNI/reflection paths.
 - Debug reports no longer persist or copy stack traces, local IPv4 addresses, or six-digit verification values.
+- AdMob and UMP are initialized only through `MonetizationManager` after UMP consent processing; the automatic Ads provider is removed from the merged manifest.
+- The only ad surface is an idle device-selection banner. It is policy-disabled during active Browser/Native Receiver sessions and destroyed when removed from Compose.
+- Release ads use externally configured IDs; debug uses Google's official test IDs, and missing release IDs disable ads instead of falling back to test IDs.
+- No casting media or receiver diagnostics are passed to the advertising SDK.
 
 ## Must be confirmed on devices and in Play Console
 
@@ -18,3 +22,4 @@
 - Notifications and foreground service disclosure are user-visible and accurate.
 - Clean uninstall removes app-private diagnostics.
 - Play declarations match the signed artifact, not just source intent.
+- Google's current SDK data disclosures and the publisher's final AdMob/UMP configuration match the Play Data Safety form and privacy policy.

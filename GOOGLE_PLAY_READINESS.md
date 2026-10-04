@@ -11,3 +11,9 @@ Google's current target API guidance requires new apps and updates to target And
 The release branch adds environment-only signing configuration, version `0.9.0-beta1`, explicit release shrinking, and R8 rules for WebRTC/JNI/reflection. The generated release bundle remains unsigned unless the publisher supplies the protected variables documented in `RELEASE_SIGNING.md`. This is intentional: signing ownership cannot be safely invented in the sandbox.
 
 The app's local transport and media path are direct and encrypted. MediaProjection and optional playback audio are user-initiated and disclosed in-app. Diagnostics are app-private and redacted. Physical device coverage, signed 64-bit verification, Play Console declarations, privacy-policy hosting, and final policy review remain required before public production release. See `BETA_READINESS_AUDIT.md` for the release gates.
+
+## Play beta monetization update
+
+The `release/play-beta` branch advances the beta version to `0.9.1-beta` / version code `3`. Official Google Mobile Ads `25.5.0` and UMP `4.0.0` are integrated through a centralized policy. Only a safe idle banner is implemented. The official UMP flow controls consent and privacy options; missing consent, network failure, or ad failure never blocks local casting.
+
+Production AdMob IDs and the upload key remain publisher-controlled inputs. A protected manual `Android Signed Play Beta` workflow is prepared, while normal CI continues to build debug and unsigned release validation without signing secrets. See `RELEASE_SIGNING.md` and `PLAY_CONSOLE_BETA_GUIDE.md`.

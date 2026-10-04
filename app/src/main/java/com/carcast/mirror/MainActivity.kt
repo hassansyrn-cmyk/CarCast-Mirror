@@ -42,6 +42,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.carcast.mirror.discovery.*
 import com.carcast.mirror.service.*
 import com.carcast.mirror.core.*
+import com.carcast.mirror.monetization.*
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import android.view.SurfaceView
@@ -132,6 +133,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(state)
         DebugDiagnostics.init(this)
+        MonetizationManager.initialize(this)
         val prior = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             DebugDiagnostics.uncaught(throwable)
@@ -194,6 +196,13 @@ class MainActivity : ComponentActivity() {
         val diagnostics by AppState.diagnostics.collectAsStateWithLifecycle()
         val debug by AppState.debug.collectAsStateWithLifecycle()
         val audio by AppState.audio.collectAsStateWithLifecycle()
+        val monetization by MonetizationManager.ui.collectAsStateWithLifecycle()
+
+        LaunchedEffect(browserState.status, receiverState.active) {
+            MonetizationManager.setCastingActive(
+                browserState.status in setOf(BrowserStatus.STARTING, BrowserStatus.WAITING_FOR_BROWSER, BrowserStatus.APPROVAL_REQUIRED, BrowserStatus.NEGOTIATING, BrowserStatus.CONNECTED) || receiverState.active
+            )
+        }
 
         val discovery = remember { DiscoveryCoordinator(this) }
         DisposableEffect(mode, localGranted) {
@@ -232,7 +241,8 @@ class MainActivity : ComponentActivity() {
                             },
                             onSelectReceiver = { showPin = it },
                             onManualConnect = { manual = true },
-                            onSystemCast = { startActivity(Intent(Settings.ACTION_CAST_SETTINGS)) }
+                            onSystemCast = { startActivity(Intent(Settings.ACTION_CAST_SETTINGS)) },
+                            showIdleAd = monetization.adsReady && !monetization.castingActive
                         )
                     } else {
                         val scrollable = Modifier.weight(1f).verticalScroll(rememberScrollState())
@@ -262,6 +272,7 @@ class MainActivity : ComponentActivity() {
                             )
                             "car" -> CarModeScreen(modifier = scrollable)
                             "help" -> HelpScreen(modifier = scrollable)
+                            "settings" -> SettingsScreen(monetization, modifier = scrollable)
                             else -> DiagnosticsScreen(
                                 diagnostics = diagnostics,
                                 debug = debug,
@@ -331,7 +342,8 @@ class MainActivity : ComponentActivity() {
             "browser" to "Browser",
             "car" to "Car mode",
             "diag" to "Diagnostics",
-            "help" to "Help"
+            "help" to "Help",
+            "settings" to "Settings"
         )
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -368,7 +380,8 @@ class MainActivity : ComponentActivity() {
         onScan: () -> Unit,
         onSelectReceiver: (DiscoveredReceiver) -> Unit,
         onManualConnect: () -> Unit,
-        onSystemCast: () -> Unit
+        onSystemCast: () -> Unit,
+        showIdleAd: Boolean
     ) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PageHeading(
@@ -440,6 +453,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) { Text("Use Android System Cast", textAlign = TextAlign.Center) }
+                if (showIdleAd) SafeIdleBanner(AdSurface.IDLE_DEVICES)
             }
         }
     }
@@ -751,6 +765,36 @@ class MainActivity : ComponentActivity() {
             SurfaceCard {
                 Text("What does CarCast store?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("CarCast has no account, cloud relay, advertising SDK, or analytics service. Session diagnostics stay in app-private storage until you clear them; media stays on the local connection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+
+    @Composable
+    private fun SettingsScreen(monetization: MonetizationUiState, modifier: Modifier) {
+        Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            PageHeading("Settings", "Manage privacy choices without changing your casting setup.")
+            SurfaceCard {
+                Text("Privacy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (monetization.privacyOptionsRequired) "Review or change the advertising privacy choices provided by Google's consent platform." else "Advertising privacy options are not currently required for this device or region.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (monetization.privacyOptionsRequired) {
+                    OutlinedButton(
+                        onClick = { MonetizationManager.showPrivacyOptions(this@MainActivity) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { Text("Privacy options") }
+                }
+            }
+            SurfaceCard {
+                Text("Advertising", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (monetization.adsReady) "Limited banner ads may appear only on idle device screens. Ads are disabled during casting, receiver mode, approvals, and permission flows." else "Ads are unavailable or not configured. Casting does not depend on advertising.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

@@ -31,3 +31,56 @@ export CARCAST_RELEASE_KEY_PASSWORD='use-a-secret-manager'
 ```
 
 The repository workflow intentionally builds and tests debug artifacts only until signing ownership is configured.
+
+## Exact upload-key creation instructions
+
+Run this locally on a trusted machine. Choose a strong password and store it in a password manager; do not send it in chat or commit it.
+
+```bash
+mkdir -p "$HOME/.carcast-keys"
+umask 077
+keytool -genkeypair -v \
+  -keystore "$HOME/.carcast-keys/carcast-upload.jks" \
+  -alias carcast-upload \
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -storepass 'CHOOSE_AND_STORE_LOCALLY' \
+  -keypass 'CHOOSE_AND_STORE_LOCALLY' \
+  -dname 'CN=CarCast Mirror Upload, OU=Mobile, O=Publisher, C=US'
+keytool -list -v -keystore "$HOME/.carcast-keys/carcast-upload.jks" -alias carcast-upload
+```
+
+This is the **upload key**, not the Play app-signing key. Google Play App Signing stores and uses the app-signing key to sign delivered APKs. The publisher uses the upload key to authenticate AAB uploads. Keep a secure offline backup and never commit the JKS file.
+
+## New preferred environment names
+
+```text
+CARCAST_KEYSTORE_PATH
+CARCAST_KEYSTORE_PASSWORD
+CARCAST_KEY_ALIAS
+CARCAST_KEY_PASSWORD
+CARCAST_ADMOB_APP_ID
+CARCAST_ADMOB_BANNER_AD_UNIT_ID
+```
+
+The older `CARCAST_RELEASE_*` aliases remain accepted locally for compatibility. Release ads are disabled when either production AdMob identifier is missing; debug builds always use Google's official test identifiers.
+
+## GitHub Actions setup
+
+Create a protected GitHub Environment named `play-release` under **Settings → Environments**. Add these secrets to that environment:
+
+```text
+CARCAST_KEYSTORE_BASE64
+CARCAST_KEYSTORE_PASSWORD
+CARCAST_KEY_ALIAS
+CARCAST_KEY_PASSWORD
+CARCAST_ADMOB_APP_ID
+CARCAST_ADMOB_BANNER_AD_UNIT_ID
+```
+
+Encode the JKS locally for the secret value, without printing it:
+
+```bash
+base64 -w 0 "$HOME/.carcast-keys/carcast-upload.jks" > /tmp/carcast-upload.jks.b64
+```
+
+Paste the contents of that protected file into the GitHub secret and delete the temporary file. The manual `Android Signed Play Beta` workflow is the only workflow that consumes these secrets. Pull requests and ordinary branch CI never require them. The workflow writes the keystore only under the ephemeral runner temp directory, does not upload it, and removes it in an always-run cleanup step.

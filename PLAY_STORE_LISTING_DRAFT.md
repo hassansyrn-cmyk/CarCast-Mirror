@@ -17,7 +17,7 @@ CarCast Mirror turns a compatible Android phone into a secure local casting send
 - Optionally share eligible device playback audio when Android permits it.
 - Use explicit approval, TLS/SAS verification, and encrypted WebRTC media.
 - Recover from browser disconnects, rotation, and new sessions with in-app diagnostics.
-- No account, cloud relay, advertising SDK, or analytics service.
+- No account, cloud relay, or analytics service. Beta builds may show a small banner ad only on an idle device-selection screen; ads never cover mirrored content or interrupt casting.
 
 **Requirements:** Phone and receiver must be on a compatible local network. The receiver browser must support WebRTC. Protected/DRM content and some private audio paths cannot be captured. Android Auto factory displays are not generic screen receivers; CarCast does not inject arbitrary phone pixels into them.
 
@@ -29,7 +29,7 @@ Replace with the final HTTPS-hosted privacy policy URL before Play submission.
 
 ## Suggested content declarations
 
-- Ads: No
+- Ads: Yes, for release builds with configured Google Mobile Ads identifiers
 - App access: No account required; provide test instructions and a test phone/receiver path
 - Category: Tools / Video Players & Editors (publisher to choose)
 - Target audience: Publisher to complete

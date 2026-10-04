@@ -44,3 +44,7 @@ Latest physical-test follow-up: severe low FPS now triggers an immediate resolut
 ## Beta-readiness milestone — October 2026
 
 The `release/beta-readiness` branch builds debug and unsigned release artifacts with version `0.9.0-beta1`, SDK 36, release shrinking, conditional environment-only signing, and conservative WebRTC/Bouncy Castle R8 rules. The app now includes an in-app Help/FAQ and a prominent disclosure before screen/audio consent. Diagnostics are redacted before persistence/copy. The generated unsigned AAB is a structural artifact only; physical validation, publisher signing, Play Console declarations, privacy-policy hosting, and store review remain open gates. See `BETA_READINESS_AUDIT.md` and `RELEASE_CHECKLIST.md`.
+
+## Play beta monetization milestone — October 2026
+
+The isolated `release/play-beta` branch adds official Mobile Ads `25.5.0`, UMP `4.0.0`, centralized idle-banner policy, privacy options, production-ID configuration, protected signed-AAB workflow, version `0.9.1-beta` / code `3`, Play Console guide, screenshot plan, and deployable privacy-policy HTML. No new casting protocol or baseline refactor was made. Physical regression and publisher secret configuration remain required before signing or tagging the Play beta.
