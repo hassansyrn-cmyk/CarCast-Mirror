@@ -10,7 +10,7 @@ val releaseAdMobBannerId = providers.environmentVariable("CARCAST_ADMOB_BANNER_A
 val keystorePath = providers.environmentVariable("CARCAST_KEYSTORE_PATH").orNull ?: providers.environmentVariable("CARCAST_RELEASE_STORE_FILE").orNull
 val keystorePassword = providers.environmentVariable("CARCAST_KEYSTORE_PASSWORD").orNull ?: providers.environmentVariable("CARCAST_RELEASE_STORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("CARCAST_KEY_ALIAS").orNull ?: providers.environmentVariable("CARCAST_RELEASE_KEY_ALIAS").orNull
-val keyPassword = providers.environmentVariable("CARCAST_KEY_PASSWORD").orNull ?: providers.environmentVariable("CARCAST_RELEASE_KEY_PASSWORD").orNull
+val releaseKeyPassword = providers.environmentVariable("CARCAST_KEY_PASSWORD").orNull ?: providers.environmentVariable("CARCAST_RELEASE_KEY_PASSWORD").orNull
 
 android { namespace = "com.carcast.mirror"; compileSdk = 36
     defaultConfig {
@@ -31,7 +31,7 @@ android { namespace = "com.carcast.mirror"; compileSdk = 36
                 storeFile = file(storeFilePath)
                 storePassword = keystorePassword
                 keyAlias = releaseKeyAlias
-                keyPassword = keyPassword
+                keyPassword = releaseKeyPassword
             }
         }
     }

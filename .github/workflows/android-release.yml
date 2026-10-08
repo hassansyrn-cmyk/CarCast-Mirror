@@ -7,6 +7,7 @@ on:
       - release/play-beta
     paths:
       - .github/workflows/android-release.yml
+      - app/build.gradle.kts
 
 permissions:
   contents: read
@@ -47,6 +48,22 @@ jobs:
           umask 077
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/carcast-upload.jks"
           test -s "$RUNNER_TEMP/carcast-upload.jks"
+
+      - name: Validate protected upload signing material
+        env:
+          SIGNING_STORE: ${{ runner.temp }}/carcast-upload.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.CARCAST_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.CARCAST_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.CARCAST_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          check_dir="$RUNNER_TEMP/carcast-signing-check"
+          mkdir -m 700 "$check_dir"
+          trap 'rm -rf "$check_dir"' EXIT
+          printf '%s\n' 'CarCast signing preflight' > "$check_dir/input.txt"
+          jar --create --file "$check_dir/check.jar" -C "$check_dir" input.txt
+          jarsigner -keystore "$SIGNING_STORE" -storepass "$SIGNING_STORE_PASSWORD" -keypass "$SIGNING_KEY_PASSWORD" "$check_dir/check.jar" "$SIGNING_KEY_ALIAS" >/dev/null
+          jarsigner -verify "$check_dir/check.jar" >/dev/null
 
       - name: Build signed release bundle
         env:
