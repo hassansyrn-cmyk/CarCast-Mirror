@@ -60,7 +60,20 @@ private val arabicTranslations = mapOf(
     "Why can’t I see a receiver?" to "لماذا لا أرى مستقبلاً؟",
     "Why is audio unavailable?" to "لماذا الصوت غير متاح؟",
     "How do I recover a failed session?" to "كيف أستعيد جلسة فاشلة؟",
-    "What does CarCast store?" to "ماذا يخزن CarCast؟"
+    "What does CarCast store?" to "ماذا يخزن CarCast؟",
+    "Ready to receive from a nearby CarCast phone." to "جاهز للاستقبال من هاتف CarCast قريب.",
+    "Stream to a TV or computer browser over your local network." to "بث إلى تلفاز أو متصفح كمبيوتر عبر شبكتك المحلية.",
+    "Understand which in-vehicle paths CarCast supports." to "تعرّف على طرق الاستخدام التي يدعمها CarCast داخل المركبة.",
+    "Private, local casting with clear recovery steps." to "بث محلي وخاص مع خطوات واضحة للاستعادة.",
+    "Manage privacy choices without changing your casting setup." to "إدارة خيارات الخصوصية دون تغيير إعدادات البث.",
+    "Session health and browser receiver troubleshooting." to "حالة الجلسة واستكشاف أخطاء مستقبل المتصفح وإصلاحها.",
+    "Auto" to "تلقائي",
+    "Smooth" to "سلس",
+    "High Quality" to "جودة عالية",
+    "Same Wi-Fi required" to "يجب استخدام شبكة Wi-Fi نفسها",
+    "Keep this screen open and select this receiver from the sender phone." to "أبقِ هذه الشاشة مفتوحة واختر هذا المستقبل من هاتف الإرسال.",
+    "Start a temporary local receiver page with WebRTC signaling." to "ابدأ صفحة استقبال محلية مؤقتة مع إشارات WebRTC.",
+    "Ready when you are" to "جاهز عندما تكون مستعداً"
 )
 
 @Composable
