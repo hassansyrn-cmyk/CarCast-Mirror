@@ -81,6 +81,8 @@ private val arabicTranslations = mapOf(
     "Starting Browser Receiver…" to "جارٍ بدء مستقبل المتصفح…",
     "Starting…" to "جارٍ البدء…",
     "NEEDS ATTENTION" to "يتطلب الانتباه",
+    "FAILED" to "فشل",
+    "حاول الضغط على بدء المستقبل مرة أخرى." to "حاول الضغط على بدء المستقبل مرة أخرى.",
     "ACTION REQUIRED" to "إجراء مطلوب",
     "Browser session" to "جلسة المتصفح",
     "Quality: " to "الجودة: ",

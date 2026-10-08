@@ -64,8 +64,11 @@ class NativeReceiverWebRtcService : Service() {
                     handleConnection(accepted, identity.sas)
                 }
             }.onFailure { error ->
+                running.set(false)
+                runCatching { server?.close() }
+                server = null
                 AppState.receiver { it.copy(active = false, status = "Failed") }
-                AppState.nativeReceiver { it.copy(signalingState = "Failed", lastException = error.message) }
+                AppState.nativeReceiver { it.copy(signalingState = "Failed", lastException = "${error::class.java.simpleName}: ${error.message ?: "unknown receiver startup error"}") }
             }
         }
     }

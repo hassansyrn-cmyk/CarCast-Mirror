@@ -512,6 +512,18 @@ class MainActivity : ComponentActivity() {
                     StatusBadge(A(receiverState.status.uppercase()))
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                if (receiverState.status == "Failed") {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = CarCastPalette.errorSurface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(A("تعذر بدء المستقبل"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                            Text(A(nativeReceiver.lastException ?: "حاول الضغط على بدء المستقبل مرة أخرى."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 Text(A("Keep this screen open and select this receiver from the sender phone."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(A("Same Wi-Fi required"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
