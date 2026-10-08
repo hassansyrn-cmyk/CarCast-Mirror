@@ -16,3 +16,7 @@ Privacy and Play preparation drafts are in [PRIVACY_POLICY_DRAFT.md](PRIVACY_POL
 The `release/play-beta` branch is additive from `v0.9.0-beta1`. It integrates official Google Mobile Ads SDK `25.5.0` and UMP `4.0.0` behind `MonetizationManager`. Only a small idle nearby-device banner is allowed; ads are disabled during Browser Receiver, Native Receiver, MediaProjection consent, receiver approval, connection setup, permission flows, automotive interaction, and active casting. No screen, audio, WebRTC, receiver, or diagnostics data is passed to advertising SDKs.
 
 Debug uses Google's official test App ID and banner unit ID. Release ads require publisher-provided `CARCAST_ADMOB_APP_ID` and `CARCAST_ADMOB_BANNER_AD_UNIT_ID`; missing release values disable ads safely. See [ADMOB_INTEGRATION.md](ADMOB_INTEGRATION.md), [PLAY_CONSOLE_BETA_GUIDE.md](PLAY_CONSOLE_BETA_GUIDE.md), [VERSIONING.md](VERSIONING.md), and [privacy-policy.html](privacy-policy.html).
+
+## Browser Receiver approval and playback UX fix
+
+The Browser Receiver now places the phone-side **Approve & Start** action at the top of the active session screen as soon as a TV browser connects. The browser receiver page uses a fixed viewport stage with no page scrolling, attempts fullscreen automatically, starts video without requiring a Play button, and falls back to video-muted autoplay only when the browser's autoplay policy blocks immediate audio. A single **Enable audio** action is shown only when the browser requires a user gesture for sound.

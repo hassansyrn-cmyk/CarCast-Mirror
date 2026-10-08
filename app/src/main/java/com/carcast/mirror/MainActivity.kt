@@ -607,6 +607,25 @@ class MainActivity : ComponentActivity() {
         onQualityOpenChange: (Boolean) -> Unit,
         onLaunchProjection: () -> Unit
     ) {
+        if (browserState.status == BrowserStatus.APPROVAL_REQUIRED) {
+            SurfaceCard {
+                StatusBadge("ACTION REQUIRED", CarCastPalette.warning, CarCastPalette.warningSurface)
+                Text("Approve this TV connection", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    "The TV browser is ready. Approve now to start screen sharing immediately.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onLaunchProjection, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(16.dp)) { Text("Approve & Start", fontWeight = FontWeight.Bold) }
+                    OutlinedButton(
+                        onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_REJECT)) },
+                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) { Text("Reject") }
+                }
+            }
+        }
         SurfaceCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Browser session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -701,17 +720,6 @@ class MainActivity : ComponentActivity() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-
-        if (browserState.status == BrowserStatus.APPROVAL_REQUIRED) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onLaunchProjection, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Approve") }
-                OutlinedButton(
-                    onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_REJECT)) },
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) { Text("Reject") }
-            }
         }
 
         OutlinedButton(
