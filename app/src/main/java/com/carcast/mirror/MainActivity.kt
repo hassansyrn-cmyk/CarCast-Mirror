@@ -423,7 +423,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Text(A("Nearby displays"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     StatusBadge(
-                        if (receivers.isEmpty()) "SCANNING" else "${receivers.size} FOUND",
+                        A(if (receivers.isEmpty()) "SCANNING" else "${receivers.size} FOUND"),
                         if (receivers.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         CarCastPalette.accentSoft
                     )
@@ -457,7 +457,7 @@ class MainActivity : ComponentActivity() {
                     onClick = onScan,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                     shape = RoundedCornerShape(16.dp)
-                ) { Text(if (scanning) "Scan again" else "Scan for displays", fontWeight = FontWeight.SemiBold) }
+                ) { Text(A(if (scanning) "Scan again" else "Scan for displays"), fontWeight = FontWeight.SemiBold) }
 
                 OutlinedButton(
                     onClick = onSystemCast,
@@ -518,7 +518,7 @@ class MainActivity : ComponentActivity() {
             SurfaceCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(A("CarCast Receiver"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    StatusBadge(receiverState.status.uppercase())
+                    StatusBadge(A(receiverState.status.uppercase()))
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Text(A("Keep this screen open and select this receiver from the sender phone."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -580,8 +580,8 @@ class MainActivity : ComponentActivity() {
                 browserState.status == BrowserStatus.FAILED -> {
                     SurfaceCard {
                         StatusBadge(A("NEEDS ATTENTION"), MaterialTheme.colorScheme.error, CarCastPalette.errorSurface)
-                        Text(if (browserState.error?.contains("disconnected", true) == true || browserState.error?.contains("Wi-Fi", true) == true) "Connection lost" else "Couldn’t connect", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
-                        Text(browserState.error ?: "Try reconnecting to the TV browser.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(A(if (browserState.error?.contains("disconnected", true) == true || browserState.error?.contains("Wi-Fi", true) == true) "Connection lost" else "Couldn’t connect"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                        Text(A(browserState.error ?: "Try reconnecting to the TV browser."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             Button(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Reconnect")) }
                             OutlinedButton(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_STOP)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Stop Casting")) }
@@ -640,14 +640,14 @@ class MainActivity : ComponentActivity() {
         SurfaceCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(A("Browser session"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                StatusBadge(browserState.status.name.replace('_', ' '))
+                StatusBadge(A(browserState.status.name.replace('_', ' ')))
             }
             Box {
                 OutlinedButton(
                     onClick = { onQualityOpenChange(true) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text(A("Quality: ${when (browserState.qualityMode) { BrowserQualityMode.AUTO -> ")Auto"; BrowserQualityMode.LOW_LATENCY -> "Smooth"; BrowserQualityMode.FULL_HD -> "High Quality"; BrowserQualityMode.HD -> "Smooth" }}")) }
+                ) { Text(A("Quality: ${when (browserState.qualityMode) { BrowserQualityMode.AUTO -> "Auto"; BrowserQualityMode.LOW_LATENCY -> "Smooth"; BrowserQualityMode.FULL_HD -> "High Quality"; BrowserQualityMode.HD -> "Smooth" }}")) }
                 DropdownMenu(expanded = qualityOpen, onDismissRequest = { onQualityOpenChange(false) }) {
                     listOf(BrowserQualityMode.AUTO to "Auto", BrowserQualityMode.LOW_LATENCY to "Smooth", BrowserQualityMode.FULL_HD to "High Quality").forEach { (qualityMode, label) ->
                         DropdownMenuItem(
@@ -839,17 +839,17 @@ class MainActivity : ComponentActivity() {
             MetricSection(
                 "Connection",
                 listOf(
-                    "Protocol" to diagnostics.protocol,
-                    "State" to diagnostics.state,
-                    "Receiver" to diagnostics.receiver,
-                    "Codec" to diagnostics.codec
+                    A("Protocol") to diagnostics.protocol,
+                    A("State") to diagnostics.state,
+                    A("Receiver") to diagnostics.receiver,
+                    A("Codec") to diagnostics.codec
                 )
             )
             MetricSection(
                 "Video",
                 listOf(
-                    "Capture resolution" to diagnostics.captureResolution,
-                    "Sent resolution" to diagnostics.resolution,
+                    A("Capture resolution") to diagnostics.captureResolution,
+                    A("Sent resolution") to diagnostics.resolution,
                     "FPS" to (diagnostics.fps?.toString() ?: "Unavailable"),
                     "Encoded FPS" to (diagnostics.encodedFps?.toString() ?: "Unavailable"),
                     "Quality limitation" to (diagnostics.qualityLimitationReason ?: "None reported")
@@ -886,10 +886,10 @@ class MainActivity : ComponentActivity() {
 
             SurfaceCard {
                 Text(A("Browser receiver debug"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                DiagnosticRow("Last successful stage", debug.lastSuccessfulStage ?: "Unavailable")
-                DiagnosticRow("Last error stage", debug.lastErrorStage ?: "None")
-                DiagnosticRow("Exception", debug.exceptionClass ?: "None")
-                DiagnosticRow("Message", debug.message ?: "None")
+                DiagnosticRow(A("Last successful stage"), debug.lastSuccessfulStage ?: "Unavailable")
+                DiagnosticRow(A("Last error stage"), debug.lastErrorStage ?: "None")
+                DiagnosticRow(A("Exception"), debug.exceptionClass ?: "None")
+                DiagnosticRow(A("Message"), debug.message ?: "None")
                 if (debug.previousCrash) StatusNotice("Previous CarCast session crashed.", MaterialTheme.colorScheme.error, CarCastPalette.errorSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(onClick = onCopyReport, modifier = Modifier.weight(1f).heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text(A("COPY DEBUG REPORT")) }
@@ -1031,7 +1031,7 @@ private fun StreamMetric(label: String, value: String, modifier: Modifier = Modi
 private fun SupportedPath(number: String, description: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatusBadge(number)
-        Text(description, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(A(description), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
