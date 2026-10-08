@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
@@ -43,6 +44,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.carcast.mirror.discovery.*
 import com.carcast.mirror.service.*
 import com.carcast.mirror.core.*
@@ -54,6 +57,8 @@ import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import kotlinx.coroutines.delay
 import org.webrtc.SurfaceViewRenderer
+
+private const val PREF_NATIVE_LOW_LATENCY = "native_low_latency"
 
 private object CarCastPalette {
     val background = Color(0xFF071014)
@@ -103,6 +108,7 @@ class MainActivity : ComponentActivity() {
     private var browserApproval = false
     private var audioPermissionRequested = false
     private var nativeAudioPermissionRequested = false
+    private fun selectedNativeQualityMode() = if (getSharedPreferences("carcast_preferences", MODE_PRIVATE).getBoolean(PREF_NATIVE_LOW_LATENCY, false)) BrowserQualityMode.LOW_LATENCY else BrowserQualityMode.AUTO
     private val projection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null && selected != null) {
             val target = selected!!
@@ -112,7 +118,8 @@ class MainActivity : ComponentActivity() {
                 .putExtra(NativeWebRtcSenderService.EXTRA_HOST, target.host.hostAddress)
                 .putExtra(NativeWebRtcSenderService.EXTRA_PORT, target.port)
                 .putExtra(NativeWebRtcSenderService.EXTRA_SAS, selectedPin)
-                .putExtra(NativeWebRtcSenderService.EXTRA_SENDER_NAME, "CarCast phone"))
+                .putExtra(NativeWebRtcSenderService.EXTRA_SENDER_NAME, "CarCast phone")
+                .putExtra(NativeWebRtcSenderService.EXTRA_QUALITY_MODE, selectedNativeQualityMode().name))
         }
     }
     private val browserProjection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -197,6 +204,8 @@ class MainActivity : ComponentActivity() {
         var pin by remember { mutableStateOf("") }
         var manual by remember { mutableStateOf(false) }
         var qualityOpen by remember { mutableStateOf(false) }
+        var receiverFullscreen by rememberSaveable { mutableStateOf(false) }
+        var nativeLowLatency by rememberSaveable { mutableStateOf(languagePrefs.getBoolean(PREF_NATIVE_LOW_LATENCY, false)) }
         val browserState by AppState.browser.collectAsStateWithLifecycle()
         val receiverState by AppState.receiver.collectAsStateWithLifecycle()
         val nativeReceiver by AppState.nativeReceiver.collectAsStateWithLifecycle()
@@ -204,6 +213,13 @@ class MainActivity : ComponentActivity() {
         val debug by AppState.debug.collectAsStateWithLifecycle()
         val audio by AppState.audio.collectAsStateWithLifecycle()
         val monetization by MonetizationManager.ui.collectAsStateWithLifecycle()
+
+        SideEffect {
+            val insetsController = WindowInsetsControllerCompat(window, window.decorView)
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (mode == "receive" && receiverFullscreen) insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            else insetsController.show(WindowInsetsCompat.Type.systemBars())
+        }
 
         LaunchedEffect(browserState.status, receiverState.active) {
             MonetizationManager.setCastingActive(
@@ -226,6 +242,9 @@ class MainActivity : ComponentActivity() {
         ) {
         MaterialTheme(colorScheme = carCastColorScheme()) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                if (mode == "receive" && receiverFullscreen) {
+                    FullscreenReceiverScreen(receiverState.status) { receiverFullscreen = false }
+                } else {
                 Column(
                     Modifier
                         .fillMaxSize()
@@ -242,6 +261,11 @@ class MainActivity : ComponentActivity() {
                             localGranted = localGranted,
                             scanning = scanning,
                             receivers = receivers,
+                            lowLatency = nativeLowLatency,
+                            onLowLatencyChange = { enabled ->
+                                nativeLowLatency = enabled
+                                languagePrefs.edit().putBoolean(PREF_NATIVE_LOW_LATENCY, enabled).apply()
+                            },
                             modifier = Modifier.weight(1f),
                             onRequestAccess = { requestLocalNetwork() },
                             onScan = {
@@ -263,6 +287,7 @@ class MainActivity : ComponentActivity() {
                                 nativeReceiver = nativeReceiver,
                                 localGranted = localGranted,
                                 modifier = scrollable,
+                                onToggleFullscreen = { receiverFullscreen = true },
                                 onStart = {
                                     if (localGranted) startService(Intent(this@MainActivity, NativeReceiverWebRtcService::class.java))
                                     else requestLocalNetwork()
@@ -287,6 +312,7 @@ class MainActivity : ComponentActivity() {
                             else -> HelpScreen(modifier = scrollable)
                         }
                     }
+                }
                 }
             }
         }
@@ -377,6 +403,8 @@ class MainActivity : ComponentActivity() {
         localGranted: Boolean,
         scanning: Boolean,
         receivers: List<DiscoveredReceiver>,
+        lowLatency: Boolean,
+        onLowLatencyChange: (Boolean) -> Unit,
         modifier: Modifier,
         onRequestAccess: () -> Unit,
         onScan: () -> Unit,
@@ -390,6 +418,16 @@ class MainActivity : ComponentActivity() {
                 title = A("Find your display"),
                 subtitle = A("Securely mirror to a nearby screen on your local network.")
             )
+
+            SurfaceCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(A("Reduce lag"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text(A("Try lower-resolution Smooth mode to reduce processing and network load. The image may be less sharp; this applies to your next cast."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = lowLatency, onCheckedChange = onLowLatencyChange)
+                }
+            }
 
             if (!localGranted) {
                 SurfaceCard {
@@ -503,7 +541,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ReceiveScreen(receiverState: ReceiverUiState, nativeReceiver: NativeReceiverMetrics, localGranted: Boolean, modifier: Modifier, onStart: () -> Unit, onApprove: () -> Unit, onDecline: () -> Unit, onStop: () -> Unit) {
+    private fun ReceiveScreen(receiverState: ReceiverUiState, nativeReceiver: NativeReceiverMetrics, localGranted: Boolean, modifier: Modifier, onToggleFullscreen: () -> Unit, onStart: () -> Unit, onApprove: () -> Unit, onDecline: () -> Unit, onStop: () -> Unit) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PageHeading(receiverState.friendlyName, A("Ready to receive from a nearby CarCast phone."))
             SurfaceCard {
@@ -534,16 +572,26 @@ class MainActivity : ComponentActivity() {
                     Text(A("Enter this code on the sender phone when prompted."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Surface(
-                modifier = Modifier.fillMaxWidth().height(300.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = Color.Black,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                AndroidView(
-                    factory = { context -> SurfaceViewRenderer(context).also { NativeReceiverRenderer.attach(it) } },
-                    modifier = Modifier.fillMaxSize()
-                )
+            Box(Modifier.fillMaxWidth().height(300.dp)) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    AndroidView(
+                        factory = { context -> SurfaceViewRenderer(context).also { NativeReceiverRenderer.attach(it) } },
+                        modifier = Modifier.fillMaxSize(),
+                        onRelease = { NativeReceiverRenderer.detach(it) }
+                    )
+                }
+                if (receiverState.status == "Connected") {
+                    FilledTonalButton(
+                        onClick = onToggleFullscreen,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) { Text(A("Full screen")) }
+                }
             }
             if (receiverState.pendingSender != null) {
                 SurfaceCard {
@@ -561,6 +609,29 @@ class MainActivity : ComponentActivity() {
             } else if (receiverState.status == "Connected") {
                 Text(A("Connected · ${nativeReceiver.audioTrackStatus}"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 OutlinedButton(onClick = onStop, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Stop receiver")) }
+            }
+        }
+    }
+
+    @Composable
+    private fun FullscreenReceiverScreen(status: String, onExit: () -> Unit) {
+        BackHandler(onBack = onExit)
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            AndroidView(
+                factory = { context -> SurfaceViewRenderer(context).also { NativeReceiverRenderer.attach(it) } },
+                modifier = Modifier.fillMaxSize(),
+                onRelease = { NativeReceiverRenderer.detach(it) }
+            )
+            Surface(
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xCC071014),
+                border = BorderStroke(1.dp, CarCastPalette.outline)
+            ) {
+                TextButton(onClick = onExit) { Text(A("Exit full screen")) }
+            }
+            if (status != "Connected") {
+                Text(A(status), modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp), color = Color.White, style = MaterialTheme.typography.labelLarge)
             }
         }
     }

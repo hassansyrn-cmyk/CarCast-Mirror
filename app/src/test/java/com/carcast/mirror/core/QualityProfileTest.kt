@@ -14,6 +14,14 @@ class QualityProfileTest {
         assertTrue(BrowserQualityMode.FULL_HD.profile().minBitrateBps < 1_500_000)
     }
 
+    @Test fun lowLatencyProfileTradesResolutionForLowerBitrate() {
+        val smooth = BrowserQualityMode.LOW_LATENCY.profile()
+        assertEquals(854, smooth.maxWidth)
+        assertEquals(480, smooth.maxHeight)
+        assertEquals(30, smooth.fps)
+        assertTrue(smooth.targetBitrateBps < BrowserQualityMode.HD.profile().targetBitrateBps)
+    }
+
     @Test fun severeLowFpsIsConstrainedOnFirstSample() {
         val next = QualityAdaptation.next(QualityAdaptationState(), BrowserQualityMode.FULL_HD, 40, 0, 8.0, 30)
         assertEquals(1, next.constrainedSamples)

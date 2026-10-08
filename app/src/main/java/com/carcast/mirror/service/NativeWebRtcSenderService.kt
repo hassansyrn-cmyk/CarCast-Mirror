@@ -34,12 +34,13 @@ class NativeWebRtcSenderService : Service() {
             val port = intent.getIntExtra(EXTRA_PORT, 0)
             val sas = intent.getStringExtra(EXTRA_SAS) ?: run { stopSelf(); return START_NOT_STICKY }
             val senderName = intent.getStringExtra(EXTRA_SENDER_NAME) ?: "CarCast phone"
-            executor.execute { connect(host, port, sas, senderName, result, data) }
+            val qualityMode = intent.getStringExtra(EXTRA_QUALITY_MODE)?.let { runCatching { BrowserQualityMode.valueOf(it) }.getOrNull() } ?: BrowserQualityMode.AUTO
+            executor.execute { connect(host, port, sas, senderName, result, data, qualityMode) }
         }
         return START_NOT_STICKY
     }
 
-    private fun connect(host: String, port: Int, sas: String, senderName: String, result: Int, data: Intent) {
+    private fun connect(host: String, port: Int, sas: String, senderName: String, result: Int, data: Intent, qualityMode: BrowserQualityMode) {
         runCatching {
             AppState.mirror { it.copy(state = ConnectionState.CONNECTING, protocol = "CarCast Native WebRTC", startedAtMs = System.currentTimeMillis()) }
             socket = TlsIdentity.clientSocket(host, port).apply { soTimeout = 1_000; tcpNoDelay = true }
@@ -53,7 +54,7 @@ class NativeWebRtcSenderService : Service() {
             ProjectionLifecycle.begin("native-sender-${System.currentTimeMillis()}")
             session = BrowserWebRtcSession(this, { json -> channel.write(FrameTypes.NATIVE_SIGNAL, json.toByteArray()) }, audioEnabled = AppState.audio.value.enabled) { reason -> AppState.nativeReceiver { it.copy(lastDisconnectReason = reason) }; stopSelf() }
             ProjectionLifecycle.webRtcCreated()
-            session!!.setQuality(BrowserQualityMode.AUTO)
+            session!!.setQuality(qualityMode)
             AppState.mirror { it.copy(state = ConnectionState.AUTHENTICATING) }
             ProjectionLifecycle.captureStarted()
             session!!.startCapture(result, data)
@@ -103,6 +104,7 @@ class NativeWebRtcSenderService : Service() {
         const val EXTRA_PORT = "port"
         const val EXTRA_SAS = "sas"
         const val EXTRA_SENDER_NAME = "senderName"
+        const val EXTRA_QUALITY_MODE = "qualityMode"
         const val NOTIFICATION_ID = 93
     }
 }

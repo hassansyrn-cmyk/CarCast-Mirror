@@ -1,6 +1,7 @@
 package com.carcast.mirror.service
 
 import org.webrtc.EglBase
+import org.webrtc.RendererCommon
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
 
@@ -11,11 +12,11 @@ object NativeReceiverRenderer {
 
     @Synchronized fun attach(next: SurfaceViewRenderer) {
         renderer?.let { old -> track?.removeSink(old); runCatching { old.release() } }
-        egl?.release()
-        egl = EglBase.create()
+        if (egl == null) egl = EglBase.create()
         next.init(egl!!.eglBaseContext, null)
         next.setEnableHardwareScaler(true)
         next.setMirror(false)
+        next.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
         renderer = next
         track?.addSink(next)
     }
@@ -33,7 +34,11 @@ object NativeReceiverRenderer {
 
     @Synchronized fun detach(view: SurfaceViewRenderer) {
         track?.removeSink(view)
-        if (renderer === view) renderer = null
+        if (renderer === view) {
+            renderer = null
+            runCatching { egl?.release() }
+            egl = null
+        }
         runCatching { view.release() }
     }
 }
