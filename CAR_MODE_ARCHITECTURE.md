@@ -4,7 +4,7 @@
 
 CarCast must not present a generic full-screen phone-screen receiver for a factory Android Auto display. Android Auto is a phone-projection platform: apps connect through supported Android for Cars services and categories rather than receiving an arbitrary MediaProjection stream on the head unit. The official Android Auto documentation says that parked activities on the head unit are limited to supported parked categories, and the current parked-app guide lists games for Android Auto while video is an Android Automotive OS category. The Android Auto parked-app integration page also warns that builds outside the supported categories are rejected during review. [1] [2] [3]
 
-That rules out claiming support for a factory Nissan Rogue 2018 Android Auto screen unless the vehicle or head-unit vendor provides a separate supported receiver surface. CarCast will not use undocumented Android Auto APIs, ADB or developer-mode exploits, patched Android Auto packages, Accessibility misuse, or any other bypass.
+That rules out claiming support for a factory vehicle Android Auto screen unless the vehicle or head-unit vendor provides a separate supported receiver surface. CarCast will not use undocumented Android Auto APIs, ADB or developer-mode exploits, patched Android Auto packages, Accessibility misuse, or any other bypass.
 
 ## Legitimate product modes
 

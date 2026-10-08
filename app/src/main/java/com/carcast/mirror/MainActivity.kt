@@ -22,6 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -182,7 +186,9 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun CarCastApp() {
-        var mode by remember { mutableStateOf("cast") }
+        val languagePrefs = remember { getSharedPreferences("carcast_preferences", MODE_PRIVATE) }
+        var arabic by rememberSaveable { mutableStateOf(languagePrefs.getBoolean("arabic_ui", false)) }
+        var mode by rememberSaveable { mutableStateOf("cast") }
         var localGranted by remember { mutableStateOf(localNetworkGranted()) }
         var scanning by remember { mutableStateOf(false) }
         var receivers by remember { mutableStateOf(listOf<DiscoveredReceiver>()) }
@@ -213,6 +219,10 @@ class MainActivity : ComponentActivity() {
             onDispose { discovery.stop() }
         }
 
+        CompositionLocalProvider(
+            LocalArabic provides arabic,
+            LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr
+        ) {
         MaterialTheme(colorScheme = carCastColorScheme()) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(
@@ -272,7 +282,7 @@ class MainActivity : ComponentActivity() {
                             )
                             "car" -> CarModeScreen(modifier = scrollable)
                             "help" -> HelpScreen(modifier = scrollable)
-                            "settings" -> SettingsScreen(monetization, modifier = scrollable)
+                            "settings" -> SettingsScreen(monetization, arabic, onArabicChanged = { value -> arabic = value; languagePrefs.edit().putBoolean("arabic_ui", value).apply() }, modifier = scrollable)
                             else -> DiagnosticsScreen(
                                 diagnostics = diagnostics,
                                 debug = debug,
@@ -288,20 +298,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        }
 
         if (showPin != null) {
             AlertDialog(
                 onDismissRequest = { showPin = null },
                 shape = RoundedCornerShape(24.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                title = { Text("Confirm pairing code", fontWeight = FontWeight.SemiBold) },
+                title = { Text(A("Confirm pairing code"), fontWeight = FontWeight.SemiBold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Enter the temporary six-digit code shown on the receiver.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedTextField(
                             value = pin,
                             onValueChange = { pin = it.filter(Char::isDigit).take(6) },
-                            label = { Text("Pairing code") },
+                            label = { Text(A("Pairing code")) },
                             singleLine = true
                         )
                     }
@@ -315,9 +326,9 @@ class MainActivity : ComponentActivity() {
                             showPin = null
                             launchNativeProjection()
                         }
-                    ) { Text("Continue") }
+                    ) { Text(A("Continue")) }
                 },
-                dismissButton = { TextButton(onClick = { showPin = null }) { Text("Cancel") } }
+                dismissButton = { TextButton(onClick = { showPin = null }) { Text(A("Cancel")) } }
             )
         }
 
@@ -392,7 +403,7 @@ class MainActivity : ComponentActivity() {
             if (!localGranted) {
                 SurfaceCard {
                     StatusBadge("PERMISSION NEEDED", CarCastPalette.warning, CarCastPalette.warningSurface)
-                    Text("Local network access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(A("Local network access"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         "CarCast needs local network access to discover and securely connect to a receiver. Screen content is not uploaded.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -402,7 +413,7 @@ class MainActivity : ComponentActivity() {
                         onClick = onRequestAccess,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         shape = RoundedCornerShape(16.dp)
-                    ) { Text("Allow local network access") }
+                    ) { Text(A("Allow local network access")) }
                 }
             } else {
                 Row(
@@ -410,7 +421,7 @@ class MainActivity : ComponentActivity() {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Nearby displays", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(A("Nearby displays"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     StatusBadge(
                         if (receivers.isEmpty()) "SCANNING" else "${receivers.size} FOUND",
                         if (receivers.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
@@ -426,7 +437,7 @@ class MainActivity : ComponentActivity() {
                     if (receivers.isEmpty()) {
                         item {
                             SurfaceCard {
-                                Text("No displays found yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text(A("No displays found yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Text(
                                     "Keep this screen open while CarCast checks your local network. You can also connect by IP or use Android System Cast.",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -452,7 +463,7 @@ class MainActivity : ComponentActivity() {
                     onClick = onSystemCast,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     shape = RoundedCornerShape(16.dp)
-                ) { Text("Use Android System Cast", textAlign = TextAlign.Center) }
+                ) { Text(A("Use Android System Cast"), textAlign = TextAlign.Center) }
                 if (showIdleAd) SafeIdleBanner(AdSurface.IDLE_DEVICES)
             }
         }
@@ -531,15 +542,15 @@ class MainActivity : ComponentActivity() {
                     Text("Confirm that both screens show the same verification code:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(receiverState.pendingSas?.chunked(3)?.joinToString(" ") ?: "------", style = MaterialTheme.typography.headlineMedium, letterSpacing = 3.sp, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                        Button(onClick = onApprove, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text("CONNECT") }
-                        OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text("DECLINE") }
+                        Button(onClick = onApprove, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("CONNECT")) }
+                        OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("DECLINE")) }
                     }
                 }
             } else if (!receiverState.active || receiverState.status == "Stopped" || receiverState.status == "Failed") {
-                Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text("Start receiver", fontWeight = FontWeight.SemiBold) }
+                Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Start receiver"), fontWeight = FontWeight.SemiBold) }
             } else if (receiverState.status == "Connected") {
                 Text("Connected · ${nativeReceiver.audioTrackStatus}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                OutlinedButton(onClick = onStop, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text("Stop receiver") }
+                OutlinedButton(onClick = onStop, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Stop receiver")) }
             }
         }
     }
@@ -556,7 +567,7 @@ class MainActivity : ComponentActivity() {
         onLaunchProjection: () -> Unit
     ) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading("Browser receiver", "Stream to a TV or computer browser over your local network.")
+            PageHeading(A("Browser receiver"), A("Stream to a TV or computer browser over your local network."))
 
             when {
                 browserState.status == BrowserStatus.STARTING -> {
@@ -572,8 +583,8 @@ class MainActivity : ComponentActivity() {
                         Text(if (browserState.error?.contains("disconnected", true) == true || browserState.error?.contains("Wi-Fi", true) == true) "Connection lost" else "Couldn’t connect", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
                         Text(browserState.error ?: "Try reconnecting to the TV browser.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                            Button(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Reconnect") }
-                            OutlinedButton(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_STOP)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Stop Casting") }
+                            Button(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Reconnect")) }
+                            OutlinedButton(onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_STOP)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Stop Casting")) }
                         }
                     }
                 }
@@ -591,7 +602,7 @@ class MainActivity : ComponentActivity() {
                             },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                             shape = RoundedCornerShape(16.dp)
-                        ) { Text("Start Browser Receiver", fontWeight = FontWeight.SemiBold) }
+                        ) { Text(A("Start Browser Receiver"), fontWeight = FontWeight.SemiBold) }
                     }
                 }
             }
@@ -610,19 +621,19 @@ class MainActivity : ComponentActivity() {
         if (browserState.status == BrowserStatus.APPROVAL_REQUIRED) {
             SurfaceCard {
                 StatusBadge("ACTION REQUIRED", CarCastPalette.warning, CarCastPalette.warningSurface)
-                Text("Approve this TV connection", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(A("Approve this TV connection"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     "The TV browser is ready. Approve now to start screen sharing immediately.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = onLaunchProjection, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(16.dp)) { Text("Approve & Start", fontWeight = FontWeight.Bold) }
+                    Button(onClick = onLaunchProjection, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Approve & Start"), fontWeight = FontWeight.Bold) }
                     OutlinedButton(
                         onClick = { startService(Intent(this@MainActivity, BrowserReceiverService::class.java).setAction(BrowserReceiverService.ACTION_REJECT)) },
                         modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                         shape = RoundedCornerShape(16.dp)
-                    ) { Text("Reject") }
+                    ) { Text(A("Reject")) }
                 }
             }
         }
@@ -653,7 +664,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Open on your TV", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(A("Open on your TV"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                     Text(
                         "http://${browserState.address}:${browserState.httpPort}",
@@ -682,7 +693,7 @@ class MainActivity : ComponentActivity() {
         }
 
         SurfaceCard {
-            Text("Actual stream", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(A("Actual stream"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StreamMetric("Resolution", diagnostics.resolution, Modifier.weight(1f))
                 StreamMetric("Frame rate", diagnostics.fps?.let { "%.1f FPS".format(it) } ?: "FPS unavailable", Modifier.weight(1f))
@@ -696,7 +707,7 @@ class MainActivity : ComponentActivity() {
         SurfaceCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Share device audio", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(A("Share device audio"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text("Send supported phone audio to the receiver.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(
@@ -714,7 +725,7 @@ class MainActivity : ComponentActivity() {
         }
 
         SurfaceCard {
-            Text("What will be shared", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(A("What will be shared"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
                 "When you approve, CarCast captures your device screen and, if enabled, supported playback audio. It sends the stream only over the encrypted local connection to the receiver you approve; it is not uploaded or stored by CarCast.",
                 style = MaterialTheme.typography.bodySmall,
@@ -734,17 +745,17 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun CarModeScreen(modifier: Modifier) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading("Car mode", "Understand which in-vehicle paths CarCast supports.")
+            PageHeading(A("Car mode"), A("Understand which in-vehicle paths CarCast supports."))
             SurfaceCard {
                 StatusBadge("COMPATIBILITY NOTE", CarCastPalette.warning, CarCastPalette.warningSurface)
                 Text(
-                    "Factory Android Auto displays are not generic screen receivers. CarCast cannot bypass Android Auto or inject arbitrary phone pixels into a Nissan Rogue factory display.",
+                    "Factory Android Auto displays are not generic screen receivers. CarCast cannot bypass Android Auto or inject arbitrary phone pixels into a vehicle factory display.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             SurfaceCard {
-                Text("Supported paths", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Supported paths"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 SupportedPath("01", "Android-powered head unit with CarCast Receiver installed directly.")
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SupportedPath("02", "Android Automotive OS only through an eligible, reviewed parked-app category.")
@@ -757,32 +768,40 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun HelpScreen(modifier: Modifier) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading("Help & FAQ", "Private, local casting with clear recovery steps.")
+            PageHeading(A("Help & FAQ"), A("Private, local casting with clear recovery steps."))
             SurfaceCard {
-                Text("Why can’t I see a receiver?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Why can’t I see a receiver?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Keep the phone and receiver on the same Wi-Fi network. Start the receiver first, then scan again. VPNs, guest Wi-Fi isolation, and captive portals can block local discovery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SurfaceCard {
-                Text("Why is audio unavailable?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Why is audio unavailable?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Android playback capture supports eligible media and game audio only. Protected content, DRM-restricted apps, microphone input, and some manufacturer audio paths cannot be captured. Turn off Share device audio to continue video-only.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SurfaceCard {
-                Text("How do I recover a failed session?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("How do I recover a failed session?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Stop the receiver, close the TV browser tab, reopen the displayed local URL, and start a new session. Each screen-share approval is single-use by Android design.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SurfaceCard {
-                Text("What does CarCast store?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("What does CarCast store?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("CarCast has no account, cloud relay, advertising SDK, or analytics service. Session diagnostics stay in app-private storage until you clear them; media stays on the local connection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 
     @Composable
-    private fun SettingsScreen(monetization: MonetizationUiState, modifier: Modifier) {
+    private fun SettingsScreen(monetization: MonetizationUiState, arabic: Boolean, onArabicChanged: (Boolean) -> Unit, modifier: Modifier) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading("Settings", "Manage privacy choices without changing your casting setup.")
+            PageHeading(A("Settings"), A("Manage privacy choices without changing your casting setup."))
             SurfaceCard {
-                Text("Privacy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Language"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Arabic language"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilterChip(selected = !arabic, onClick = { onArabicChanged(false) }, label = { Text(A("English")) })
+                    FilterChip(selected = arabic, onClick = { onArabicChanged(true) }, label = { Text(A("Arabic")) })
+                }
+            }
+            SurfaceCard {
+                Text(A("Privacy"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     if (monetization.privacyOptionsRequired) "Review or change the advertising privacy choices provided by Google's consent platform." else "Advertising privacy options are not currently required for this device or region.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -793,11 +812,11 @@ class MainActivity : ComponentActivity() {
                         onClick = { MonetizationManager.showPrivacyOptions(this@MainActivity) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                         shape = RoundedCornerShape(14.dp)
-                    ) { Text("Privacy options") }
+                    ) { Text(A("Privacy options")) }
                 }
             }
             SurfaceCard {
-                Text("Advertising", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Advertising"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     if (monetization.adsReady) "Limited banner ads may appear only on idle device screens. Ads are disabled during casting, receiver mode, approvals, and permission flows." else "Ads are unavailable or not configured. Casting does not depend on advertising.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -816,7 +835,7 @@ class MainActivity : ComponentActivity() {
         onClearReport: () -> Unit
     ) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading("Diagnostics", "Session health and browser receiver troubleshooting.")
+            PageHeading(A("Diagnostics"), A("Session health and browser receiver troubleshooting."))
             MetricSection(
                 "Connection",
                 listOf(
@@ -873,8 +892,8 @@ class MainActivity : ComponentActivity() {
                 DiagnosticRow("Message", debug.message ?: "None")
                 if (debug.previousCrash) StatusNotice("Previous CarCast session crashed.", MaterialTheme.colorScheme.error, CarCastPalette.errorSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onCopyReport, modifier = Modifier.weight(1f).heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text("COPY DEBUG REPORT") }
-                    OutlinedButton(onClick = onClearReport, modifier = Modifier.weight(1f).heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text("CLEAR") }
+                    Button(onClick = onCopyReport, modifier = Modifier.weight(1f).heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text(A("COPY DEBUG REPORT")) }
+                    OutlinedButton(onClick = onClearReport, modifier = Modifier.weight(1f).heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text(A("CLEAR")) }
                 }
             }
         }
@@ -889,18 +908,18 @@ class MainActivity : ComponentActivity() {
             onDismissRequest = onDismiss,
             shape = RoundedCornerShape(24.dp),
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Manual receiver", fontWeight = FontWeight.SemiBold) },
+            title = { Text(A("Manual receiver"), fontWeight = FontWeight.SemiBold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(host, { host = it }, label = { Text("IP address") }, singleLine = true)
-                    OutlinedTextField(port, { port = it.filter(Char::isDigit) }, label = { Text("Port") }, singleLine = true)
-                    OutlinedTextField(code, { code = it.filter(Char::isDigit).take(6) }, label = { Text("Pairing code") }, singleLine = true)
+                    OutlinedTextField(host, { host = it }, label = { Text(A("IP address")) }, singleLine = true)
+                    OutlinedTextField(port, { port = it.filter(Char::isDigit) }, label = { Text(A("Port")) }, singleLine = true)
+                    OutlinedTextField(code, { code = it.filter(Char::isDigit).take(6) }, label = { Text(A("Pairing code")) }, singleLine = true)
                 }
             },
             confirmButton = {
-                TextButton(enabled = host.isNotBlank() && code.length == 6, onClick = { onConnect(host, port.toIntOrNull() ?: 49152, code) }) { Text("Continue") }
+                TextButton(enabled = host.isNotBlank() && code.length == 6, onClick = { onConnect(host, port.toIntOrNull() ?: 49152, code) }) { Text(A("Continue")) }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text(A("Cancel")) } }
         )
     }
 
