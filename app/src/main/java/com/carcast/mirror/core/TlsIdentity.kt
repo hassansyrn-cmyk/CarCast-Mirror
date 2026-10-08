@@ -7,6 +7,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.math.BigInteger
 import java.net.InetSocketAddress
+import java.net.Socket
 import java.security.*
 import java.security.cert.X509Certificate
 import java.util.Date
@@ -30,9 +31,26 @@ object TlsIdentity {
         // Android's built-in BC provider may not expose CertificateFactory.X.509.
         // Let the platform's default X.509 provider convert the generated certificate.
         val cert = JcaX509CertificateConverter().getCertificate(certificateHolder)
-        val store = KeyStore.getInstance("JKS").apply { load(null, null); setKeyEntry("carcast", kp.private, CharArray(0), arrayOf(cert)) }
-        val km = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(store, CharArray(0)) }
-        return ServerIdentity(SSLContext.getInstance("TLSv1.3").apply { init(km.keyManagers, null, SecureRandom()) }, sas(cert))
+        // Android providers may not support the JKS keystore type; serve the ephemeral identity directly.
+        val keyManager = object : X509ExtendedKeyManager() {
+            private val alias = "carcast"
+            private val chain = arrayOf(cert)
+
+            override fun getClientAliases(keyType: String?, issuers: Array<out Principal>?) = null
+            override fun chooseClientAlias(keyType: Array<out String>?, issuers: Array<out Principal>?, socket: Socket?) = null
+            override fun getServerAliases(keyType: String?, issuers: Array<out Principal>?): Array<String>? =
+                if (supportsKeyType(keyType, kp.private.algorithm)) arrayOf(alias) else null
+            override fun chooseServerAlias(keyType: String?, issuers: Array<out Principal>?, socket: Socket?): String? =
+                if (supportsKeyType(keyType, kp.private.algorithm)) alias else null
+            override fun getCertificateChain(requestedAlias: String?): Array<X509Certificate>? =
+                if (requestedAlias == alias) chain else null
+            override fun getPrivateKey(requestedAlias: String?): PrivateKey? =
+                if (requestedAlias == alias) kp.private else null
+            override fun chooseEngineClientAlias(keyType: Array<out String>?, issuers: Array<out Principal>?, engine: SSLEngine?) = null
+            override fun chooseEngineServerAlias(keyType: String?, issuers: Array<out Principal>?, engine: SSLEngine?): String? =
+                if (supportsKeyType(keyType, kp.private.algorithm)) alias else null
+        }
+        return ServerIdentity(SSLContext.getInstance("TLSv1.3").apply { init(arrayOf<KeyManager>(keyManager), null, SecureRandom()) }, sas(cert))
     }
     fun serverSocket(identity: ServerIdentity): SSLServerSocket { return identity.context.serverSocketFactory.createServerSocket(0) as SSLServerSocket }
     fun clientSocket(host: String, port: Int): SSLSocket {
@@ -41,4 +59,8 @@ object TlsIdentity {
         return (context.socketFactory.createSocket() as SSLSocket).apply { connect(InetSocketAddress(host, port), 15_000); startHandshake() }
     }
     fun sas(certificate: java.security.cert.Certificate): String { val digest = MessageDigest.getInstance("SHA-256").digest(certificate.encoded); val n = ((digest[0].toInt() and 0xff) shl 16) or ((digest[1].toInt() and 0xff) shl 8) or (digest[2].toInt() and 0xff); return "%06d".format(n % 1_000_000) }
+
+    private fun supportsKeyType(keyType: String?, keyAlgorithm: String): Boolean =
+        keyType != null && (keyType.equals(keyAlgorithm, ignoreCase = true) ||
+            (keyAlgorithm.equals("RSA", ignoreCase = true) && keyType.contains("RSA", ignoreCase = true)))
 }
