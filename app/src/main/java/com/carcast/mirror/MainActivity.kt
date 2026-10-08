@@ -189,6 +189,7 @@ class MainActivity : ComponentActivity() {
         val languagePrefs = remember { getSharedPreferences("carcast_preferences", MODE_PRIVATE) }
         var arabic by rememberSaveable { mutableStateOf(languagePrefs.getBoolean("arabic_ui", false)) }
         var mode by rememberSaveable { mutableStateOf("cast") }
+        LaunchedEffect(Unit) { if (mode == "diag") mode = "cast" }
         var localGranted by remember { mutableStateOf(localNetworkGranted()) }
         var scanning by remember { mutableStateOf(false) }
         var receivers by remember { mutableStateOf(listOf<DiscoveredReceiver>()) }
@@ -283,16 +284,7 @@ class MainActivity : ComponentActivity() {
                             "car" -> CarModeScreen(modifier = scrollable)
                             "help" -> HelpScreen(modifier = scrollable)
                             "settings" -> SettingsScreen(monetization, arabic, onArabicChanged = { value -> arabic = value; languagePrefs.edit().putBoolean("arabic_ui", value).apply() }, modifier = scrollable)
-                            else -> DiagnosticsScreen(
-                                diagnostics = diagnostics,
-                                debug = debug,
-                                modifier = scrollable,
-                                onCopyReport = {
-                                    val clipboard = getSystemService(android.content.ClipboardManager::class.java)
-                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("CarCast Debug Report", DebugDiagnostics.report()))
-                                },
-                                onClearReport = { DebugDiagnostics.clear() }
-                            )
+                            else -> HelpScreen(modifier = scrollable)
                         }
                     }
                 }
@@ -352,7 +344,6 @@ class MainActivity : ComponentActivity() {
             "receive" to "Receive",
             "browser" to "Browser",
             "car" to "Car mode",
-            "diag" to "Diagnostics",
             "help" to "Help",
             "settings" to "Settings"
         )
@@ -396,8 +387,8 @@ class MainActivity : ComponentActivity() {
     ) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PageHeading(
-                title = "Find your display",
-                subtitle = "Securely mirror to a nearby screen on your local network."
+                title = A("Find your display"),
+                subtitle = A("Securely mirror to a nearby screen on your local network.")
             )
 
             if (!localGranted) {
@@ -405,7 +396,7 @@ class MainActivity : ComponentActivity() {
                     StatusBadge(A("PERMISSION NEEDED"), CarCastPalette.warning, CarCastPalette.warningSurface)
                     Text(A("Local network access"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "CarCast needs local network access to discover and securely connect to a receiver. Screen content is not uploaded.",
+                        A("CarCast needs local network access to discover and securely connect to a receiver. Screen content is not uploaded."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -439,7 +430,7 @@ class MainActivity : ComponentActivity() {
                             SurfaceCard {
                                 Text(A("No displays found yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "Keep this screen open while CarCast checks your local network. You can also connect by IP or use Android System Cast.",
+                                    A("Keep this screen open while CarCast checks your local network. You can also connect by IP or use Android System Cast."),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -464,7 +455,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) { Text(A("Use Android System Cast"), textAlign = TextAlign.Center) }
-                if (showIdleAd) SafeIdleBanner(AdSurface.IDLE_DEVICES)
+                if (showIdleAd && !LocalArabic.current) SafeIdleBanner(AdSurface.IDLE_DEVICES)
             }
         }
     }
@@ -749,7 +740,7 @@ class MainActivity : ComponentActivity() {
             SurfaceCard {
                 StatusBadge(A("COMPATIBILITY NOTE"), CarCastPalette.warning, CarCastPalette.warningSurface)
                 Text(
-                    "Factory Android Auto displays are not generic screen receivers. CarCast cannot bypass Android Auto or inject arbitrary phone pixels into a vehicle factory display.",
+                    A("Factory Android Auto displays are not generic screen receivers. CarCast cannot bypass Android Auto or inject arbitrary phone pixels into a vehicle factory display."),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -803,7 +794,7 @@ class MainActivity : ComponentActivity() {
             SurfaceCard {
                 Text(A("Privacy"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    if (monetization.privacyOptionsRequired) "Review or change the advertising privacy choices provided by Google's consent platform." else "Advertising privacy options are not currently required for this device or region.",
+                    A(if (monetization.privacyOptionsRequired) "Review or change the advertising privacy choices provided by Google's consent platform." else "Advertising privacy options are not currently required for this device or region."),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -818,7 +809,7 @@ class MainActivity : ComponentActivity() {
             SurfaceCard {
                 Text(A("Advertising"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    if (monetization.adsReady) "Limited banner ads may appear only on idle device screens. Ads are disabled during casting, receiver mode, approvals, and permission flows." else "Ads are unavailable or not configured. Casting does not depend on advertising.",
+                    A(if (monetization.adsReady) "Limited banner ads may appear only on idle device screens. Ads are disabled during casting, receiver mode, approvals, and permission flows." else "Ads are unavailable or not configured. Casting does not depend on advertising."),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
