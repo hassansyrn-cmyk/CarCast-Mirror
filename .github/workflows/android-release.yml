@@ -1,7 +1,12 @@
 name: Android Signed Play Beta
-
 on:
   workflow_dispatch:
+
+  push:
+    branches:
+      - release/play-beta
+    paths:
+      - .github/workflows/android-release.yml
 
 permissions:
   contents: read
