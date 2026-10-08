@@ -2,13 +2,6 @@ name: Android Signed Play Beta
 on:
   workflow_dispatch:
 
-  push:
-    branches:
-      - release/play-beta
-    paths:
-      - .github/workflows/android-release.yml
-      - app/build.gradle.kts
-
 permissions:
   contents: read
 
@@ -91,7 +84,7 @@ jobs:
       - name: Upload signed AAB to protected workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CarCastMirror-${{ github.ref_name }}-signed-aab
+          name: CarCastMirror-${{ github.run_number }}-signed-aab
           path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7
