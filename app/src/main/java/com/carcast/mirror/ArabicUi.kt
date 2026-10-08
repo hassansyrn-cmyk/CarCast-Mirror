@@ -76,6 +76,7 @@ private val arabicTranslations = mapOf(
     "CarCast Receiver" to "مستقبل CarCast",
     "APPROVAL REQUIRED" to "الموافقة مطلوبة",
     "Confirm that both screens show the same verification code:" to "تأكد من ظهور رمز التحقق نفسه على الشاشتين:",
+    "Enter this code on the sender phone when prompted." to "أدخل هذا الرمز على هاتف الإرسال عند طلبه.",
     "Connected · " to "متصل · ",
     "STARTING" to "جارٍ البدء",
     "Starting Browser Receiver…" to "جارٍ بدء مستقبل المتصفح…",

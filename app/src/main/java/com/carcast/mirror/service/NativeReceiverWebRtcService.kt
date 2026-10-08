@@ -46,7 +46,7 @@ class NativeReceiverWebRtcService : Service() {
     private fun startReceiver() {
         NativeReceiverRuntime.enabled = true
         NativeReceiverRuntime.friendlyName = ReceiverIdentityStore.name(this)
-        AppState.receiver { it.copy(active = true, status = "Ready to receive", friendlyName = NativeReceiverRuntime.friendlyName, pendingSender = null, pendingSas = null) }
+        AppState.receiver { it.copy(active = true, status = "Starting", pairingCode = null, expiresAtMs = 0, friendlyName = NativeReceiverRuntime.friendlyName, pendingSender = null, pendingSas = null) }
         AppState.nativeReceiver { it.copy(discoveryState = "Starting", signalingState = "Listening") }
         executor.execute {
             runCatching {
@@ -67,7 +67,7 @@ class NativeReceiverWebRtcService : Service() {
                 running.set(false)
                 runCatching { server?.close() }
                 server = null
-                AppState.receiver { it.copy(active = false, status = "Failed") }
+                AppState.receiver { it.copy(active = false, status = "Failed", pairingCode = null, expiresAtMs = 0) }
                 AppState.nativeReceiver { it.copy(signalingState = "Failed", lastException = "${error::class.java.simpleName}: ${error.message ?: "unknown receiver startup error"}") }
             }
         }
@@ -90,7 +90,7 @@ class NativeReceiverWebRtcService : Service() {
             override fun onUnregistrationFailed(info: NsdServiceInfo, errorCode: Int) {}
         }
         nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, registration)
-        AppState.receiver { it.copy(pairingCode = sas, expiresAtMs = Long.MAX_VALUE, port = server!!.localPort) }
+        AppState.receiver { it.copy(status = "Ready to receive", pairingCode = sas, expiresAtMs = Long.MAX_VALUE, port = server!!.localPort) }
     }
 
     private fun handleConnection(accepted: SSLSocket, sas: String) {
@@ -210,7 +210,7 @@ class NativeReceiverWebRtcService : Service() {
         registration?.let { runCatching { nsd.unregisterService(it) } }
         runCatching { server?.close() }
         executor.shutdownNow()
-        AppState.receiver { it.copy(active = false, status = "Stopped", pendingSender = null, pendingSas = null) }
+        AppState.receiver { it.copy(active = false, status = "Stopped", pairingCode = null, expiresAtMs = 0, pendingSender = null, pendingSas = null) }
         super.onDestroy()
     }
 

@@ -527,6 +527,13 @@ class MainActivity : ComponentActivity() {
                 Text(A("Keep this screen open and select this receiver from the sender phone."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(A("Same Wi-Fi required"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
+            if (receiverState.showsStandalonePairingCode()) {
+                SurfaceCard {
+                    Text(A("Pairing code"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(receiverState.pairingCode!!.chunked(3).joinToString(" "), style = MaterialTheme.typography.headlineMedium, letterSpacing = 3.sp, fontWeight = FontWeight.Bold)
+                    Text(A("Enter this code on the sender phone when prompted."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Surface(
                 modifier = Modifier.fillMaxWidth().height(300.dp),
                 shape = RoundedCornerShape(20.dp),
