@@ -17,8 +17,8 @@ object TlsIdentity {
     init { if (Security.getProvider("BC") == null) Security.addProvider(BouncyCastleProvider()) }
     data class ServerIdentity(val context: SSLContext, val sas: String)
     fun serverIdentity(): ServerIdentity {
-        val kp = KeyPairGenerator.getInstance("RSA", "BC").apply { initialize(2048) }.generateKeyPair()
-        val now = Date(); val cert = JcaX509v3CertificateBuilder(X500Name("CN=CarCast ephemeral"), BigInteger(64, SecureRandom()), now, Date(now.time + 120_000), X500Name("CN=CarCast ephemeral"), kp.public).build(JcaContentSignerBuilder("SHA256withRSA").setProvider("BC").build(kp.private)).let { JcaX509CertificateConverter().setProvider("BC").getCertificate(it) }
+        val kp = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
+        val now = Date(); val cert = JcaX509v3CertificateBuilder(X500Name("CN=CarCast ephemeral"), BigInteger(64, SecureRandom()), now, Date(now.time + 120_000), X500Name("CN=CarCast ephemeral"), kp.public).build(JcaContentSignerBuilder("SHA256withRSA").build(kp.private)).let { JcaX509CertificateConverter().setProvider("BC").getCertificate(it) }
         val store = KeyStore.getInstance("JKS").apply { load(null, null); setKeyEntry("carcast", kp.private, CharArray(0), arrayOf(cert)) }
         val km = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(store, CharArray(0)) }
         return ServerIdentity(SSLContext.getInstance("TLSv1.3").apply { init(km.keyManagers, null, SecureRandom()) }, sas(cert))
