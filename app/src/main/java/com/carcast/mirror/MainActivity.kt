@@ -231,7 +231,7 @@ class MainActivity : ComponentActivity() {
                         .safeDrawingPadding()
                         .padding(horizontal = 20.dp, vertical = 14.dp)
                 ) {
-                    BrandMark()
+                    BrandMark(arabic = arabic, onToggleLanguage = { val next = !arabic; arabic = next; languagePrefs.edit().putBoolean("arabic_ui", next).apply() })
                     Spacer(Modifier.height(18.dp))
                     ModeNavigation(mode = mode, onModeSelected = { mode = it })
                     Spacer(Modifier.height(22.dp))
@@ -308,7 +308,7 @@ class MainActivity : ComponentActivity() {
                 title = { Text(A("Confirm pairing code"), fontWeight = FontWeight.SemiBold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Enter the temporary six-digit code shown on the receiver.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(A("Enter the temporary six-digit code shown on the receiver."), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedTextField(
                             value = pin,
                             onValueChange = { pin = it.filter(Char::isDigit).take(6) },
@@ -402,7 +402,7 @@ class MainActivity : ComponentActivity() {
 
             if (!localGranted) {
                 SurfaceCard {
-                    StatusBadge("PERMISSION NEEDED", CarCastPalette.warning, CarCastPalette.warningSurface)
+                    StatusBadge(A("PERMISSION NEEDED"), CarCastPalette.warning, CarCastPalette.warningSurface)
                     Text(A("Local network access"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         "CarCast needs local network access to discover and securely connect to a receiver. Screen content is not uploaded.",
@@ -495,7 +495,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("TV", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(A("TV"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -517,12 +517,12 @@ class MainActivity : ComponentActivity() {
             PageHeading(receiverState.friendlyName, A("Ready to receive from a nearby CarCast phone."))
             SurfaceCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("CarCast Receiver", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(A("CarCast Receiver"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     StatusBadge(receiverState.status.uppercase())
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Text("Keep this screen open and select this receiver from the sender phone.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Same Wi-Fi required", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(A("Keep this screen open and select this receiver from the sender phone."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(A("Same Wi-Fi required"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             Surface(
                 modifier = Modifier.fillMaxWidth().height(300.dp),
@@ -537,9 +537,9 @@ class MainActivity : ComponentActivity() {
             }
             if (receiverState.pendingSender != null) {
                 SurfaceCard {
-                    StatusBadge("APPROVAL REQUIRED", MaterialTheme.colorScheme.tertiary, CarCastPalette.warningSurface)
-                    Text("${receiverState.pendingSender} wants to cast", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("Confirm that both screens show the same verification code:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    StatusBadge(A("APPROVAL REQUIRED"), MaterialTheme.colorScheme.tertiary, CarCastPalette.warningSurface)
+                    Text(A("${receiverState.pendingSender} wants to cast"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(A("Confirm that both screens show the same verification code:"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(receiverState.pendingSas?.chunked(3)?.joinToString(" ") ?: "------", style = MaterialTheme.typography.headlineMedium, letterSpacing = 3.sp, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                         Button(onClick = onApprove, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("CONNECT")) }
@@ -549,7 +549,7 @@ class MainActivity : ComponentActivity() {
             } else if (!receiverState.active || receiverState.status == "Stopped" || receiverState.status == "Failed") {
                 Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Start receiver"), fontWeight = FontWeight.SemiBold) }
             } else if (receiverState.status == "Connected") {
-                Text("Connected · ${nativeReceiver.audioTrackStatus}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                Text(A("Connected · ${nativeReceiver.audioTrackStatus}"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 OutlinedButton(onClick = onStop, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Stop receiver")) }
             }
         }
@@ -572,14 +572,14 @@ class MainActivity : ComponentActivity() {
             when {
                 browserState.status == BrowserStatus.STARTING -> {
                     SurfaceCard {
-                        StatusBadge("STARTING", MaterialTheme.colorScheme.primary, CarCastPalette.accentSoft)
-                        Text("Starting Browser Receiver…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text("Starting…") }
+                        StatusBadge(A("STARTING"), MaterialTheme.colorScheme.primary, CarCastPalette.accentSoft)
+                        Text(A("Starting Browser Receiver…"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Starting…")) }
                     }
                 }
                 browserState.status == BrowserStatus.FAILED -> {
                     SurfaceCard {
-                        StatusBadge("NEEDS ATTENTION", MaterialTheme.colorScheme.error, CarCastPalette.errorSurface)
+                        StatusBadge(A("NEEDS ATTENTION"), MaterialTheme.colorScheme.error, CarCastPalette.errorSurface)
                         Text(if (browserState.error?.contains("disconnected", true) == true || browserState.error?.contains("Wi-Fi", true) == true) "Connection lost" else "Couldn’t connect", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
                         Text(browserState.error ?: "Try reconnecting to the TV browser.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -593,8 +593,8 @@ class MainActivity : ComponentActivity() {
                 }
                 else -> {
                     SurfaceCard {
-                        Text("Ready when you are", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("Start a temporary local receiver page with WebRTC signaling.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(A("Ready when you are"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(A("Start a temporary local receiver page with WebRTC signaling."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Button(
                             onClick = {
                                 if (localGranted) startService(Intent(this@MainActivity, BrowserReceiverService::class.java))
@@ -620,7 +620,7 @@ class MainActivity : ComponentActivity() {
     ) {
         if (browserState.status == BrowserStatus.APPROVAL_REQUIRED) {
             SurfaceCard {
-                StatusBadge("ACTION REQUIRED", CarCastPalette.warning, CarCastPalette.warningSurface)
+                StatusBadge(A("ACTION REQUIRED"), CarCastPalette.warning, CarCastPalette.warningSurface)
                 Text(A("Approve this TV connection"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     "The TV browser is ready. Approve now to start screen sharing immediately.",
@@ -639,7 +639,7 @@ class MainActivity : ComponentActivity() {
         }
         SurfaceCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Browser session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Browser session"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 StatusBadge(browserState.status.name.replace('_', ' '))
             }
             Box {
@@ -647,7 +647,7 @@ class MainActivity : ComponentActivity() {
                     onClick = { onQualityOpenChange(true) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text("Quality: ${when (browserState.qualityMode) { BrowserQualityMode.AUTO -> "Auto"; BrowserQualityMode.LOW_LATENCY -> "Smooth"; BrowserQualityMode.FULL_HD -> "High Quality"; BrowserQualityMode.HD -> "Smooth" }}") }
+                ) { Text(A("Quality: ${when (browserState.qualityMode) { BrowserQualityMode.AUTO -> ")Auto"; BrowserQualityMode.LOW_LATENCY -> "Smooth"; BrowserQualityMode.FULL_HD -> "High Quality"; BrowserQualityMode.HD -> "Smooth" }}")) }
                 DropdownMenu(expanded = qualityOpen, onDismissRequest = { onQualityOpenChange(false) }) {
                     listOf(BrowserQualityMode.AUTO to "Auto", BrowserQualityMode.LOW_LATENCY to "Smooth", BrowserQualityMode.FULL_HD to "High Quality").forEach { (qualityMode, label) ->
                         DropdownMenuItem(
@@ -688,8 +688,8 @@ class MainActivity : ComponentActivity() {
                     contentScale = ContentScale.Fit
                 )
             }
-            DiagnosticRow("Browser", browserState.browserUserAgent ?: "Waiting for browser")
-            DiagnosticRow("LAN address", browserState.remoteAddress ?: "Waiting for browser")
+            DiagnosticRow(A("Browser"), browserState.browserUserAgent ?: "Waiting for browser")
+            DiagnosticRow(A("LAN address"), browserState.remoteAddress ?: "Waiting for browser")
         }
 
         SurfaceCard {
@@ -708,7 +708,7 @@ class MainActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(A("Share device audio"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text("Send supported phone audio to the receiver.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(A("Send supported phone audio to the receiver."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(
                     checked = audio.enabled,
@@ -721,7 +721,7 @@ class MainActivity : ComponentActivity() {
                     enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                 )
             }
-            Text("Audio: ${audio.status}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
+            Text(A("Audio: ${audio.status}"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
         }
 
         SurfaceCard {
@@ -739,7 +739,7 @@ class MainActivity : ComponentActivity() {
             shape = RoundedCornerShape(16.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-        ) { Text("Stop Receiver") }
+        ) { Text(A("Stop Receiver")) }
     }
 
     @Composable
@@ -747,7 +747,7 @@ class MainActivity : ComponentActivity() {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PageHeading(A("Car mode"), A("Understand which in-vehicle paths CarCast supports."))
             SurfaceCard {
-                StatusBadge("COMPATIBILITY NOTE", CarCastPalette.warning, CarCastPalette.warningSurface)
+                StatusBadge(A("COMPATIBILITY NOTE"), CarCastPalette.warning, CarCastPalette.warningSurface)
                 Text(
                     "Factory Android Auto displays are not generic screen receivers. CarCast cannot bypass Android Auto or inject arbitrary phone pixels into a vehicle factory display.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -771,19 +771,19 @@ class MainActivity : ComponentActivity() {
             PageHeading(A("Help & FAQ"), A("Private, local casting with clear recovery steps."))
             SurfaceCard {
                 Text(A("Why can’t I see a receiver?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Keep the phone and receiver on the same Wi-Fi network. Start the receiver first, then scan again. VPNs, guest Wi-Fi isolation, and captive portals can block local discovery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(A("Keep the phone and receiver on the same Wi-Fi network. Start the receiver first, then scan again. VPNs, guest Wi-Fi isolation, and captive portals can block local discovery."), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SurfaceCard {
                 Text(A("Why is audio unavailable?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Android playback capture supports eligible media and game audio only. Protected content, DRM-restricted apps, microphone input, and some manufacturer audio paths cannot be captured. Turn off Share device audio to continue video-only.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(A("Android playback capture supports eligible media and game audio only. Protected content, DRM-restricted apps, microphone input, and some manufacturer audio paths cannot be captured. Turn off Share device audio to continue video-only."), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SurfaceCard {
                 Text(A("How do I recover a failed session?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Stop the receiver, close the TV browser tab, reopen the displayed local URL, and start a new session. Each screen-share approval is single-use by Android design.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(A("Stop the receiver, close the TV browser tab, reopen the displayed local URL, and start a new session. Each screen-share approval is single-use by Android design."), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SurfaceCard {
                 Text(A("What does CarCast store?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("CarCast has no account, cloud relay, advertising SDK, or analytics service. Session diagnostics stay in app-private storage until you clear them; media stays on the local connection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(A("CarCast has no account, cloud relay, advertising SDK, or analytics service. Session diagnostics stay in app-private storage until you clear them; media stays on the local connection."), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -882,10 +882,10 @@ class MainActivity : ComponentActivity() {
                     "Audio packets sent" to (diagnostics.audioPacketsSent?.toString() ?: "Unavailable")
                 )
             )
-            MetricSection("Browser", listOf("Browser UA" to (diagnostics.browserUserAgent ?: "Unavailable")))
+            MetricSection(A("Browser"), listOf("Browser UA" to (diagnostics.browserUserAgent ?: "Unavailable")))
 
             SurfaceCard {
-                Text("Browser receiver debug", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(A("Browser receiver debug"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 DiagnosticRow("Last successful stage", debug.lastSuccessfulStage ?: "Unavailable")
                 DiagnosticRow("Last error stage", debug.lastErrorStage ?: "None")
                 DiagnosticRow("Exception", debug.exceptionClass ?: "None")
@@ -924,7 +924,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun BrandMark() {
+    private fun BrandMark(arabic: Boolean, onToggleLanguage: () -> Unit) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(
                 Modifier
@@ -940,14 +940,15 @@ class MainActivity : ComponentActivity() {
                 )
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(stringResource(com.carcast.mirror.R.string.app_name), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                Text(A(if (arabic) "كاركاست ميرور" else stringResource(com.carcast.mirror.R.string.app_name)), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
                 Text(
-                    stringResource(com.carcast.mirror.R.string.brand_tagline),
+                    A(if (arabic) "البث المحلي الآمن" else stringResource(com.carcast.mirror.R.string.brand_tagline)),
                     style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp),
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            StatusBadge("LOCAL", MaterialTheme.colorScheme.primary, CarCastPalette.accentSoft)
+            StatusBadge(A("LOCAL"), MaterialTheme.colorScheme.primary, CarCastPalette.accentSoft)
+            OutlinedButton(onClick = onToggleLanguage, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp), modifier = Modifier.heightIn(min = 42.dp)) { Text(if (arabic) "الإنجليزية" else "العربية", fontWeight = FontWeight.Bold) }
         }
     }
 }
