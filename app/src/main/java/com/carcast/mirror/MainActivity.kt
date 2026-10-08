@@ -368,7 +368,7 @@ class MainActivity : ComponentActivity() {
                     onClick = { onModeSelected(id) },
                     modifier = Modifier.heightIn(min = 48.dp),
                     shape = RoundedCornerShape(14.dp),
-                    label = { Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium) },
+                    label = { Text(A(label), style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium) },
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -514,7 +514,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun ReceiveScreen(receiverState: ReceiverUiState, nativeReceiver: NativeReceiverMetrics, localGranted: Boolean, modifier: Modifier, onStart: () -> Unit, onApprove: () -> Unit, onDecline: () -> Unit, onStop: () -> Unit) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading(receiverState.friendlyName, "Ready to receive from a nearby CarCast phone.")
+            PageHeading(receiverState.friendlyName, A("Ready to receive from a nearby CarCast phone."))
             SurfaceCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("CarCast Receiver", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -651,7 +651,7 @@ class MainActivity : ComponentActivity() {
                 DropdownMenu(expanded = qualityOpen, onDismissRequest = { onQualityOpenChange(false) }) {
                     listOf(BrowserQualityMode.AUTO to "Auto", BrowserQualityMode.LOW_LATENCY to "Smooth", BrowserQualityMode.FULL_HD to "High Quality").forEach { (qualityMode, label) ->
                         DropdownMenuItem(
-                            text = { Text(label) },
+                            text = { Text(A(label)) },
                             onClick = {
                                 onQualityOpenChange(false)
                                 startService(Intent(this@MainActivity, BrowserReceiverService::class.java)
