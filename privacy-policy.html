@@ -3,38 +3,59 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Privacy policy for CarCast Mirror, a local screen-mirroring app for Android.">
   <title>CarCast Mirror Privacy Policy</title>
   <style>
     :root { color-scheme: light dark; --bg:#071014; --surface:#101c22; --text:#f3f7f7; --muted:#aabcc1; --accent:#35d7c4; }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--bg); color:var(--text); font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif; }
-    main { max-width:760px; margin:0 auto; padding:clamp(24px,6vw,72px) 20px; }
+    main { max-width:820px; margin:0 auto; padding:clamp(24px,6vw,72px) 20px; }
     h1 { line-height:1.15; font-size:clamp(2rem,7vw,3.2rem); margin:0 0 8px; }
     h2 { margin-top:36px; color:var(--accent); line-height:1.25; }
-    .meta { color:var(--muted); margin-bottom:36px; }
-    a { color:var(--accent); }
+    .meta { color:var(--muted); margin-bottom:28px; }
+    a { color:var(--accent); overflow-wrap:anywhere; }
     .card { background:var(--surface); border:1px solid #2b424a; border-radius:18px; padding:20px; }
+    li { margin:0 0 8px; }
   </style>
 </head>
 <body>
 <main>
   <h1>CarCast Mirror Privacy Policy</h1>
-  <p class="meta">Effective date: to be completed by the publisher · Operator/contact: to be completed by the publisher</p>
-  <div class="card"><strong>Short version:</strong> CarCast Mirror sends user-requested screen and eligible playback audio directly to an approved local receiver. It does not upload casting media to a CarCast cloud service.</div>
-  <h2>What CarCast handles</h2>
-  <p>When you start a casting session, CarCast handles your device display and, only when you enable the option and grant Android permission, eligible playback audio. It also handles temporary receiver names, browser user-agent text, local network endpoints, connection state, and technical diagnostics.</p>
-  <h2>How casting data is used</h2>
-  <p>This information is used to discover a nearby receiver, authenticate the intended peer, establish an encrypted session, stream the content you requested, adapt quality, and troubleshoot failures. CarCast does not use screen frames or audio samples to select advertisements.</p>
-  <h2>Where casting data goes</h2>
-  <p>Screen, audio, signaling, and receiver metadata are sent directly between the phone and the receiver you select or approve over the local network. Native signaling uses TLS and WebRTC media uses DTLS-SRTP. CarCast does not operate a cloud relay for this content.</p>
-  <h2>Advertising and consent</h2>
-  <p>Beta builds may show a small Google Mobile Ads banner only on an idle device-selection surface. Ads are disabled during casting, receiver mode, connection establishment, receiver approval, MediaProjection consent, permission flows, and automotive interaction. Google Mobile Ads and Google's User Messaging Platform process information according to Google's policies and the consent choices available in your region. CarCast does not send screen, audio, WebRTC media, receiver debug data, or SAS values to those SDKs.</p>
-  <h2>Storage and deletion</h2>
-  <p>CarCast does not intentionally record or store media. Limited technical diagnostics may remain in app-private storage until you use the Diagnostics <strong>CLEAR</strong> action or clear app data. Uninstalling the app removes app-private data. Advertising SDK cache and consent records are managed by their respective SDKs and Android app storage.</p>
+  <p class="meta">Effective date: October 9, 2026<br>Publisher and operator: Hasan Hussein<br>Privacy contact: <a href="mailto:hassan.syrn@gmail.com">hassan.syrn@gmail.com</a></p>
+
+  <div class="card"><strong>In brief:</strong> CarCast Mirror sends screen content and, when you choose to enable it, eligible device playback audio directly to a receiver that you select or approve on your local network. CarCast does not operate a cloud relay or upload your casting media to a CarCast server. The beta may display a banner ad while the device is idle; Google's advertising SDK handles ad-related data as described below.</div>
+
+  <h2>Information used for casting</h2>
+  <p>When you start a session, the app accesses the screen content you choose to mirror through Android's MediaProjection consent flow. If you enable optional audio sharing and grant the required Android permission, it can capture eligible device playback audio using Android playback-capture features; this is not intended to record microphone conversations. Protected or private audio may not be available.</p>
+  <p>To discover a receiver, establish and maintain a connection, and troubleshoot it, the app may handle temporary receiver names, browser user-agent text, local-network addresses or endpoints, connection state, and technical session diagnostics. These details are used for the casting session and troubleshooting. The app does not send screen frames, playback audio, WebRTC media, receiver debug data, or session-verification values to its advertising or consent SDKs.</p>
+
+  <h2>Where casting information goes</h2>
+  <p>Casting media and connection signaling travel directly between your phone and the receiver you select or approve over the local network. CarCast does not run a cloud relay for this content. Native signaling uses encrypted TLS transport, and WebRTC media uses DTLS-SRTP encryption. Only mirror to a receiver you trust.</p>
+
+  <h2>Advertising and consent services</h2>
+  <p>Release builds may show a small Google Mobile Ads banner on an idle device-selection screen. Ads are disabled during active casting and other protected setup or receiver flows. CarCast does not operate a separate analytics service.</p>
+  <p>The Google Mobile Ads SDK may collect and share with Google an IP address (which may be used to estimate approximate location), app interactions such as app launches, taps, and video views, diagnostics such as app or SDK launch time, hang rate, and energy use, and device or account identifiers such as the Android advertising ID and app set ID (and signed-in account identifiers where applicable). Google describes these data uses as supporting advertising, analytics, and fraud prevention, and states that SDK-collected data is encrypted in transit using TLS. Google User Messaging Platform may present and process privacy or consent choices where applicable. See <a href="https://developers.google.com/admob/android/privacy/play-data-disclosure">Google's Mobile Ads SDK disclosure</a>, <a href="https://developers.google.com/admob/android/privacy">Google's ads privacy guidance</a>, and <a href="https://policies.google.com/privacy">Google's Privacy Policy</a> for details and controls.</p>
+  <p>CarCast does not request precise device location. The approximate location that Google may infer from an advertising request's IP address is handled by Google's SDK and services, not used by CarCast to locate you for casting.</p>
+
+  <h2>Storage, retention, and deletion</h2>
+  <p>CarCast does not intentionally record or store mirrored screen media or playback audio. Limited technical diagnostics may remain in app-private storage on your device until you use the Diagnostics <strong>CLEAR</strong> action, clear the app's storage, or uninstall the app. The app does not maintain a CarCast user account or server database of casting sessions. Google SDK data and consent records are handled under Google's retention practices and controls.</p>
+
   <h2>Permissions</h2>
-  <p>Android MediaProjection is requested for each screen-share session. <code>RECORD_AUDIO</code> is requested only for the optional device-playback audio path; protected or private audio may be unavailable. Network permissions support direct local discovery and transport. Notifications support active foreground-service status and Stop actions.</p>
-  <h2>Children, changes, and contact</h2>
-  <p>CarCast is not designed as a child-directed service. The publisher will complete the operator contact details and update this policy before public distribution. Privacy questions should be sent to the publisher contact shown above.</p>
+  <ul>
+    <li>Android MediaProjection asks for your approval for each screen-sharing session.</li>
+    <li>The optional playback-audio path requires the relevant Android permission and is subject to Android's capture restrictions.</li>
+    <li>Internet and network-state access support local receiver discovery and direct transport.</li>
+    <li>Notifications show active foreground-service status and provide controls such as stopping a session.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>CarCast Mirror is a general-purpose mirroring utility and is not designed as a child-directed service. The app does not knowingly collect personal information from children through a CarCast account or CarCast-operated server. Advertising SDK practices are described above and are subject to the consent and controls available in the user's region.</p>
+
+  <h2>Your choices and privacy requests</h2>
+  <p>You can stop a casting session at any time and clear locally stored diagnostics as described above. For questions about this policy, or a privacy request concerning information handled by the app, contact <a href="mailto:hassan.syrn@gmail.com">hassan.syrn@gmail.com</a>. Google advertising data is handled by Google; consult Google's linked privacy and advertising resources for its controls and requests.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>This policy may be updated when the app or its data practices change. The effective date at the top will be revised when a new version is published.</p>
 </main>
 </body>
 </html>
