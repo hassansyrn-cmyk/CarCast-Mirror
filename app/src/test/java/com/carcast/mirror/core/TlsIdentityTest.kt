@@ -18,7 +18,7 @@ class TlsIdentityTest {
 
         try {
             // Simulate Android's built-in BC provider, which may not include X.509 conversion.
-            val androidLikeBc = object : Provider("BC", "1.0", "Test provider without CertificateFactory.X.509") {}
+            val androidLikeBc = object : Provider("BC", 1.0, "Test provider without CertificateFactory.X.509") {}
             assertTrue(Security.insertProviderAt(androidLikeBc, 1) > 0)
 
             val identity = TlsIdentity.serverIdentity()
