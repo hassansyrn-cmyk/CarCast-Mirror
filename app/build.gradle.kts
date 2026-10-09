@@ -66,12 +66,9 @@ android { namespace = "com.carcast.mirror"; compileSdk = 36
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.03.00"))
     implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.fragment:fragment-ktx:1.8.6")
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("com.google.android.gms:play-services-ads:25.5.0")
@@ -80,7 +77,6 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("io.github.webrtc-sdk:android:125.6422.07")
     implementation("org.java-websocket:Java-WebSocket:1.5.7")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

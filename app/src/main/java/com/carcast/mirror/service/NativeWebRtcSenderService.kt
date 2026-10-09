@@ -42,30 +42,25 @@ class NativeWebRtcSenderService : Service() {
 
     private fun connect(host: String, port: Int, sas: String, senderName: String, result: Int, data: Intent, qualityMode: BrowserQualityMode) {
         runCatching {
-            AppState.mirror { it.copy(state = ConnectionState.CONNECTING, protocol = "CarCast Native WebRTC", startedAtMs = System.currentTimeMillis()) }
             socket = TlsIdentity.clientSocket(host, port).apply { soTimeout = 1_000; tcpNoDelay = true }
             val tls = socket!!
             require(TlsIdentity.sas(tls.session.peerCertificates.first()) == sas.filter(Char::isDigit)) { "Receiver verification code did not match" }
             val channel = TlsFramedChannel(DataInputStream(BufferedInputStream(tls.getInputStream())), DataOutputStream(BufferedOutputStream(tls.getOutputStream())))
             channel.write(FrameTypes.NATIVE_HELLO, JSONObject().put("senderName", senderName).toString().toByteArray())
-            AppState.mirror { it.copy(state = ConnectionState.PAIRING) }
             val approval = readFrame(channel, FrameTypes.NATIVE_APPROVED, FrameTypes.NATIVE_DECLINED) ?: error("Receiver approval connection closed")
             if (approval.type == FrameTypes.NATIVE_DECLINED) error(JSONObject(String(approval.payload)).optString("reason", "Receiver declined connection"))
             ProjectionLifecycle.begin("native-sender-${System.currentTimeMillis()}")
             session = BrowserWebRtcSession(this, { json -> channel.write(FrameTypes.NATIVE_SIGNAL, json.toByteArray()) }, audioEnabled = AppState.audio.value.enabled) { reason -> AppState.nativeReceiver { it.copy(lastDisconnectReason = reason) }; stopSelf() }
             ProjectionLifecycle.webRtcCreated()
             session!!.setQuality(qualityMode)
-            AppState.mirror { it.copy(state = ConnectionState.AUTHENTICATING) }
             ProjectionLifecycle.captureStarted()
             session!!.startCapture(result, data)
-            AppState.mirror { it.copy(state = ConnectionState.CONNECTED) }
             while (running.get()) {
                 val frame = readFrame(channel, FrameTypes.NATIVE_SIGNAL, FrameTypes.CLOSE) ?: break
                 if (frame.type == FrameTypes.CLOSE) break
                 session?.handle(JSONObject(String(frame.payload)))
             }
         }.onFailure { error ->
-            AppState.mirror { it.copy(state = ConnectionState.ERROR) }
             AppState.nativeReceiver { it.copy(lastDisconnectReason = error.message, lastException = error.message) }
         }
         stopSelf()
@@ -84,7 +79,6 @@ class NativeWebRtcSenderService : Service() {
         session?.stop(); session = null
         runCatching { socket?.close() }
         executor.shutdownNow()
-        AppState.mirror { it.copy(state = ConnectionState.DISCONNECTED) }
         super.onDestroy()
     }
 

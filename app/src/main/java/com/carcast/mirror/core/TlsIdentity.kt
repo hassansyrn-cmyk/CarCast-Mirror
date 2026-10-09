@@ -3,7 +3,6 @@ package com.carcast.mirror.core
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.math.BigInteger
 import java.net.InetSocketAddress
@@ -14,7 +13,6 @@ import java.util.Date
 import javax.net.ssl.*
 
 object TlsIdentity {
-    init { if (Security.getProvider("BC") == null) Security.addProvider(BouncyCastleProvider()) }
     data class ServerIdentity(val context: SSLContext, val sas: String)
     fun serverIdentity(): ServerIdentity {
         val kp = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
