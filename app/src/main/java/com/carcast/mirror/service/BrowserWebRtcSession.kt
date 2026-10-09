@@ -48,7 +48,7 @@ class BrowserWebRtcSession(private val context: Context, private val send: (Stri
     init {
         PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(context).setEnableInternalTracer(false).createInitializationOptions())
         val bridge = if (audioEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q && context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            runCatching { PlaybackCaptureAudioDeviceModule(context) { status -> AppState.audio { it.copy(status = status) } }.also { if (!it.install()) throw IllegalStateException("WebRTC audio input unavailable") } }
+            runCatching { PlaybackCaptureAudioDeviceModule(context) { status -> AppState.audio { it.copy(status = status) } } }
                 .getOrElse { AppState.audio { it.copy(status = "Audio: Unavailable — video only") }; null }
         } else null
         audioBridge = bridge
@@ -76,8 +76,7 @@ class BrowserWebRtcSession(private val context: Context, private val send: (Stri
             }
         }
         if (audioBridge != null && sharedProjection != null) {
-            audioReady = audioBridge!!.attachProjection(sharedProjection)
-            if (!audioReady) AppState.audio { it.copy(status = "Audio: Unavailable — projection attachment failed") }
+            audioReady = audioBridge!!.install() && audioBridge!!.attachProjection(sharedProjection)
         } else if (audioBridge != null) {
             AppState.audio { it.copy(status = "Audio: Unavailable — projection not ready") }
         }

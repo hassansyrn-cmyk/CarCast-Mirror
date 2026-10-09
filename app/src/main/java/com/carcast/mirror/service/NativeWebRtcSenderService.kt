@@ -71,9 +71,6 @@ class NativeWebRtcSenderService : Service() {
             require(TlsIdentity.sas(tls.session.peerCertificates.first()) == sas.filter(Char::isDigit)) { "Receiver verification code did not match" }
             val channel = TlsFramedChannel(DataInputStream(BufferedInputStream(tls.getInputStream())), DataOutputStream(BufferedOutputStream(tls.getOutputStream())))
             channel.write(FrameTypes.NATIVE_HELLO, JSONObject().put("senderName", senderName).toString().toByteArray())
-            val approval = readFrame(channel, FrameTypes.NATIVE_APPROVED, FrameTypes.NATIVE_DECLINED) ?: error("Receiver approval connection closed")
-            if (approval.type == FrameTypes.NATIVE_DECLINED) error(JSONObject(String(approval.payload)).optString("reason", "Receiver declined connection"))
-            AppState.nativeCast { it.copy(phase = NativeCastPhase.STARTING_STREAM, message = "Starting screen capture and video…") }
             ProjectionLifecycle.begin("native-sender-${System.currentTimeMillis()}")
             session = BrowserWebRtcSession(
                 this,
@@ -100,6 +97,9 @@ class NativeWebRtcSenderService : Service() {
                 stopSelf()
             }
             ProjectionLifecycle.webRtcCreated()
+            val approval = readFrame(channel, FrameTypes.NATIVE_APPROVED, FrameTypes.NATIVE_DECLINED) ?: error("Receiver approval connection closed")
+            if (approval.type == FrameTypes.NATIVE_DECLINED) error(JSONObject(String(approval.payload)).optString("reason", "Receiver declined connection"))
+            AppState.nativeCast { it.copy(phase = NativeCastPhase.STARTING_STREAM, message = "Starting screen capture and video…") }
             session!!.setQuality(qualityMode)
             ProjectionLifecycle.captureStarted()
             AppState.nativeCast { it.copy(phase = NativeCastPhase.NEGOTIATING, message = "Waiting for the receiver’s video link…") }

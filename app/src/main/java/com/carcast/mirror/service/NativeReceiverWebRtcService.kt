@@ -51,6 +51,7 @@ class NativeReceiverWebRtcService : Service() {
         executor.execute {
             runCatching {
                 val identity = TlsIdentity.serverIdentity()
+                prepareWebRtcPeer()
                 server = TlsIdentity.serverSocket(identity).apply { soTimeout = 1000 }
                 publish(identity.sas)
                 AppState.nativeReceiver { it.copy(discoveryState = "Advertising", signalingState = "Listening") }
@@ -102,6 +103,7 @@ class NativeReceiverWebRtcService : Service() {
         channel = TlsFramedChannel(input, output)
         val hello = readUntilFrame(FrameTypes.NATIVE_HELLO) ?: return
         val sender = JSONObject(hello.toString(Charsets.UTF_8)).optString("senderName", "CarCast phone").take(40)
+        prepareWebRtcPeer()
         NativeReceiverRuntime.beginApproval(sender, sas)
         AppState.receiver { it.copy(status = "Approval required", pendingSender = sender, pendingSas = sas) }
         AppState.nativeReceiver { it.copy(signalingState = "Approval required") }
@@ -117,14 +119,19 @@ class NativeReceiverWebRtcService : Service() {
         receiveWebRtc(sender)
     }
 
+    private fun prepareWebRtcPeer() {
+        if (factory == null) {
+            PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(this).setEnableInternalTracer(false).createInitializationOptions())
+            egl = EglBase.create()
+            factory = PeerConnectionFactory.builder()
+                .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl!!.eglBaseContext))
+                .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl!!.eglBaseContext, true, true))
+                .createPeerConnectionFactory()
+        }
+        if (peer == null) peer = factory!!.createPeerConnection(emptyList(), observer()) ?: error("Native receiver PeerConnection unavailable")
+    }
+
     private fun receiveWebRtc(sender: String) {
-        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(this).setEnableInternalTracer(false).createInitializationOptions())
-        egl = EglBase.create()
-        val builder = PeerConnectionFactory.builder()
-            .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl!!.eglBaseContext))
-            .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl!!.eglBaseContext, true, true))
-        factory = builder.createPeerConnectionFactory()
-        peer = factory!!.createPeerConnection(emptyList(), observer()) ?: error("Native receiver PeerConnection unavailable")
         try {
             while (running.get() && NativeReceiverRuntime.activeSender == sender) {
                 val frame = readUntilFrame(FrameTypes.NATIVE_SIGNAL) ?: break

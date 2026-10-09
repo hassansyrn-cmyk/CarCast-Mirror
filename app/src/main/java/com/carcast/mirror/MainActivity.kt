@@ -440,72 +440,67 @@ class MainActivity : ComponentActivity() {
         onSystemCast: () -> Unit,
         showIdleAd: Boolean
     ) {
-        Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PageHeading(
-                title = A("Find your display"),
-                subtitle = A("Securely mirror to a nearby screen on your local network.")
-            )
-
-            if (nativeCast.phase != NativeCastPhase.IDLE) {
-                SurfaceCard {
-                    val failed = nativeCast.phase == NativeCastPhase.FAILED
-                    val connected = nativeCast.phase == NativeCastPhase.CONNECTED
-                    val cancelled = nativeCast.message?.contains("cancelled", ignoreCase = true) == true
-                    StatusBadge(A(when { failed -> "NEEDS ATTENTION"; connected -> "CASTING"; else -> "CONNECTING" }), if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, if (failed) CarCastPalette.errorSurface else CarCastPalette.accentSoft)
-                    Text(A(when { cancelled -> "Screen sharing cancelled"; failed -> "Couldn’t start casting"; connected -> "Casting to ${nativeCast.receiverName ?: "receiver"}"; else -> "Connecting to ${nativeCast.receiverName ?: "receiver"}" }), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-                    Text(A(nativeCast.message ?: "Preparing the connection…"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (failed) {
-                        OutlinedButton(onClick = onDismissNativeCast, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text(A("Dismiss")) }
-                    } else {
-                        OutlinedButton(onClick = onStopNativeCast, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text(A(if (connected) "Stop casting" else "Cancel")) }
-                    }
-                }
-            }
-
-            SurfaceCard {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(A("Reduce lag"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text(A("Try lower-resolution Smooth mode to reduce processing and network load. The image may be less sharp; this applies to your next cast."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = lowLatency, onCheckedChange = onLowLatencyChange)
-                }
-            }
-
-            if (!localGranted) {
-                SurfaceCard {
-                    StatusBadge(A("PERMISSION NEEDED"), CarCastPalette.warning, CarCastPalette.warningSurface)
-                    Text(A("Local network access"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        A("CarCast needs local network access to discover and securely connect to a receiver. Screen content is not uploaded."),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Button(
-                        onClick = onRequestAccess,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) { Text(A("Allow local network access")) }
-                }
-            } else {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(A("Nearby displays"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    StatusBadge(
-                        A(if (receivers.isEmpty()) "SCANNING" else "${receivers.size} FOUND"),
-                        if (receivers.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                        CarCastPalette.accentSoft
+        Column(modifier.fillMaxWidth()) {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                item {
+                    PageHeading(
+                        title = A("Find your display"),
+                        subtitle = A("Securely mirror to a nearby screen on your local network.")
                     )
                 }
-
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 2.dp)
-                ) {
+                if (nativeCast.phase != NativeCastPhase.IDLE) {
+                    item {
+                        SurfaceCard {
+                            val failed = nativeCast.phase == NativeCastPhase.FAILED
+                            val connected = nativeCast.phase == NativeCastPhase.CONNECTED
+                            val cancelled = nativeCast.message?.contains("cancelled", ignoreCase = true) == true
+                            StatusBadge(A(when { failed -> "NEEDS ATTENTION"; connected -> "CASTING"; else -> "CONNECTING" }), if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, if (failed) CarCastPalette.errorSurface else CarCastPalette.accentSoft)
+                            Text(A(when { cancelled -> "Screen sharing cancelled"; failed -> "Couldn’t start casting"; connected -> "Casting to ${nativeCast.receiverName ?: "receiver"}"; else -> "Connecting to ${nativeCast.receiverName ?: "receiver"}" }), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+                            Text(A(nativeCast.message ?: "Preparing the connection…"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (failed) {
+                                OutlinedButton(onClick = onDismissNativeCast, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text(A("Dismiss")) }
+                            } else {
+                                OutlinedButton(onClick = onStopNativeCast, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text(A(if (connected) "Stop casting" else "Cancel")) }
+                            }
+                        }
+                    }
+                }
+                if (!localGranted) {
+                    item {
+                        SurfaceCard {
+                            StatusBadge(A("PERMISSION NEEDED"), CarCastPalette.warning, CarCastPalette.warningSurface)
+                            Text(A("Local network access"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                A("CarCast needs local network access to discover and securely connect to a receiver. Screen content is not uploaded."),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Button(
+                                onClick = onRequestAccess,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                shape = RoundedCornerShape(16.dp)
+                            ) { Text(A("Allow local network access")) }
+                        }
+                    }
+                } else {
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(A("Nearby displays"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            StatusBadge(
+                                A(if (receivers.isEmpty()) "SCANNING" else "${receivers.size} FOUND"),
+                                if (receivers.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                                CarCastPalette.accentSoft
+                            )
+                        }
+                    }
                     if (receivers.isEmpty()) {
                         item {
                             SurfaceCard {
@@ -523,20 +518,36 @@ class MainActivity : ComponentActivity() {
                             ReceiverCard(target = target, onClick = { onSelectReceiver(target) })
                         }
                     }
+                    item {
+                        Button(
+                            onClick = onScan,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) { Text(A(if (scanning) "Scan again" else "Scan for displays"), fontWeight = FontWeight.SemiBold) }
+                    }
+                    item {
+                        OutlinedButton(
+                            onClick = onSystemCast,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) { Text(A("Use Android System Cast"), textAlign = TextAlign.Center) }
+                    }
                 }
-
-                Button(
-                    onClick = onScan,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) { Text(A(if (scanning) "Scan again" else "Scan for displays"), fontWeight = FontWeight.SemiBold) }
-
-                OutlinedButton(
-                    onClick = onSystemCast,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) { Text(A("Use Android System Cast"), textAlign = TextAlign.Center) }
-                if (showIdleAd && !LocalArabic.current) SafeIdleBanner(AdSurface.IDLE_DEVICES)
+                item {
+                    SurfaceCard {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(A("Reduce lag"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                Text(A("Try lower-resolution Smooth mode to reduce processing and network load. The image may be less sharp; this applies to your next cast."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(checked = lowLatency, onCheckedChange = onLowLatencyChange)
+                        }
+                    }
+                }
+            }
+            if (localGranted && showIdleAd && !LocalArabic.current) {
+                Spacer(Modifier.height(4.dp))
+                SafeIdleBanner(AdSurface.IDLE_DEVICES)
             }
         }
     }

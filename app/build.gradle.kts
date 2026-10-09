@@ -17,8 +17,8 @@ android { namespace = "com.carcast.mirror"; compileSdk = 36
         applicationId = "com.carcast.mirror"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.9.1-beta"
+        versionCode = 4
+        versionName = "0.9.2-beta"
         buildConfigField("String", "ADMOB_APP_ID", escapedBuildConfig("ca-app-pub-3940256099942544~3347511713"))
         buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", escapedBuildConfig("ca-app-pub-3940256099942544/9214589741"))
         buildConfigField("Boolean", "ADS_CONFIGURED", "true")
