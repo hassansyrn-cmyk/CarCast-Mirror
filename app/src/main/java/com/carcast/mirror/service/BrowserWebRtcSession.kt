@@ -11,7 +11,7 @@ import com.carcast.mirror.core.*
 import org.json.JSONObject
 import org.webrtc.*
 
-class BrowserWebRtcSession(private val context: Context, private val send: (String) -> Unit, private val audioEnabled: Boolean = true, private val onFailure: (String) -> Unit = {}) {
+class BrowserWebRtcSession(private val context: Context, private val send: (String) -> Unit, private val audioEnabled: Boolean = true, private val onPeerState: (PeerConnection.PeerConnectionState) -> Unit = {}, private val onFailure: (String) -> Unit = {}) {
     private val egl = EglBase.create()
     private val factory: PeerConnectionFactory
     private val peer: PeerConnection
@@ -140,6 +140,7 @@ class BrowserWebRtcSession(private val context: Context, private val send: (Stri
         override fun onIceCandidate(c: IceCandidate) { send(JSONObject().put("type", "candidate").put("sdpMid", c.sdpMid).put("sdpMLineIndex", c.sdpMLineIndex).put("candidate", c.sdp).toString()) }
         override fun onConnectionChange(state: PeerConnection.PeerConnectionState) {
             lastPeerState = state
+            onPeerState(state)
             when (state) {
                 PeerConnection.PeerConnectionState.CONNECTED -> { statsHandler.removeCallbacks(recoveryTimeout); AppState.browser { it.copy(status = BrowserStatus.CONNECTED, error = null) } }
                 PeerConnection.PeerConnectionState.DISCONNECTED -> { AppState.browser { it.copy(status = BrowserStatus.NEGOTIATING, error = "Connection interrupted — trying to recover") }; statsHandler.removeCallbacks(recoveryTimeout); statsHandler.postDelayed(recoveryTimeout, 8_000) }

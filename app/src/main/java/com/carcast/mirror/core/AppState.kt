@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 enum class BrowserStatus { STOPPED, STARTING, WAITING_FOR_BROWSER, APPROVAL_REQUIRED, NEGOTIATING, CONNECTED, FAILED }
+enum class NativeCastPhase { IDLE, PREPARING, CONNECTING, WAITING_FOR_APPROVAL, STARTING_STREAM, NEGOTIATING, CONNECTED, FAILED }
+data class NativeCastUiState(val phase: NativeCastPhase = NativeCastPhase.IDLE, val receiverName: String? = null, val message: String? = null)
 data class ReceiverUiState(val active: Boolean = false, val pairingCode: String? = null, val expiresAtMs: Long = 0, val port: Int = 0, val status: String = "Stopped", val friendlyName: String = "CarCast Receiver", val pendingSender: String? = null, val pendingSas: String? = null)
 fun ReceiverUiState.showsStandalonePairingCode(): Boolean =
     active && status == "Ready to receive" && pendingSender == null && pairingCode?.matches(Regex("\\d{6}")) == true
@@ -20,12 +22,15 @@ object AppState {
     private val _debug = MutableStateFlow(BrowserDebugReport()); val debug: StateFlow<BrowserDebugReport> = _debug.asStateFlow()
     private val _audio = MutableStateFlow(AudioUiState()); val audio: StateFlow<AudioUiState> = _audio.asStateFlow()
     private val _nativeReceiver = MutableStateFlow(NativeReceiverMetrics()); val nativeReceiver: StateFlow<NativeReceiverMetrics> = _nativeReceiver.asStateFlow()
+    private val _nativeCast = MutableStateFlow(NativeCastUiState()); val nativeCast: StateFlow<NativeCastUiState> = _nativeCast.asStateFlow()
     fun receiver(update: (ReceiverUiState) -> ReceiverUiState) { _receiver.value = update(_receiver.value) }
     fun browser(update: (BrowserUiState) -> BrowserUiState) { _browser.value = update(_browser.value) }
     fun diagnostics(update: (LiveDiagnostics) -> LiveDiagnostics) { _diagnostics.value = update(_diagnostics.value) }
     fun setDebug(report: BrowserDebugReport) { _debug.value = report }
     fun audio(update: (AudioUiState) -> AudioUiState) { _audio.value = update(_audio.value) }
     fun nativeReceiver(update: (NativeReceiverMetrics) -> NativeReceiverMetrics) { _nativeReceiver.value = update(_nativeReceiver.value) }
+    fun nativeCast(update: (NativeCastUiState) -> NativeCastUiState) { _nativeCast.value = update(_nativeCast.value) }
+    fun resetNativeCast() { _nativeCast.value = NativeCastUiState() }
     fun resetBrowserReceiverState() { _browser.value = BrowserUiState(); _diagnostics.value = LiveDiagnostics() }
     fun failBrowserReceiver(message: String) { _browser.value = _browser.value.copy(status = BrowserStatus.FAILED, address = "", httpPort = 0, signalPort = 0, remoteAddress = null, browserUserAgent = null, sessionStartedAtMs = null, error = message) }
 }

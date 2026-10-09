@@ -108,18 +108,25 @@ class MainActivity : ComponentActivity() {
     private var browserApproval = false
     private var audioPermissionRequested = false
     private var nativeAudioPermissionRequested = false
-    private fun selectedNativeQualityMode() = if (getSharedPreferences("carcast_preferences", MODE_PRIVATE).getBoolean(PREF_NATIVE_LOW_LATENCY, false)) BrowserQualityMode.LOW_LATENCY else BrowserQualityMode.AUTO
+    private fun selectedNativeQualityMode() = if (getSharedPreferences("carcast_preferences", MODE_PRIVATE).getBoolean(PREF_NATIVE_LOW_LATENCY, true)) BrowserQualityMode.LOW_LATENCY else BrowserQualityMode.AUTO
     private val projection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null && selected != null) {
             val target = selected!!
-            ContextCompat.startForegroundService(this, Intent(this, NativeWebRtcSenderService::class.java)
-                .putExtra(NativeWebRtcSenderService.EXTRA_PROJECTION_RESULT, result.resultCode)
-                .putExtra(NativeWebRtcSenderService.EXTRA_PROJECTION_DATA, result.data)
-                .putExtra(NativeWebRtcSenderService.EXTRA_HOST, target.host.hostAddress)
-                .putExtra(NativeWebRtcSenderService.EXTRA_PORT, target.port)
-                .putExtra(NativeWebRtcSenderService.EXTRA_SAS, selectedPin)
-                .putExtra(NativeWebRtcSenderService.EXTRA_SENDER_NAME, "CarCast phone")
-                .putExtra(NativeWebRtcSenderService.EXTRA_QUALITY_MODE, selectedNativeQualityMode().name))
+            AppState.nativeCast { it.copy(phase = NativeCastPhase.CONNECTING, receiverName = target.name, message = "Connecting securely to ${target.name}…") }
+            try {
+                ContextCompat.startForegroundService(this, Intent(this, NativeWebRtcSenderService::class.java)
+                    .putExtra(NativeWebRtcSenderService.EXTRA_PROJECTION_RESULT, result.resultCode)
+                    .putExtra(NativeWebRtcSenderService.EXTRA_PROJECTION_DATA, result.data)
+                    .putExtra(NativeWebRtcSenderService.EXTRA_HOST, target.host.hostAddress)
+                    .putExtra(NativeWebRtcSenderService.EXTRA_PORT, target.port)
+                    .putExtra(NativeWebRtcSenderService.EXTRA_SAS, selectedPin)
+                    .putExtra(NativeWebRtcSenderService.EXTRA_SENDER_NAME, "CarCast phone")
+                    .putExtra(NativeWebRtcSenderService.EXTRA_QUALITY_MODE, selectedNativeQualityMode().name))
+            } catch (t: Throwable) {
+                AppState.nativeCast { it.copy(phase = NativeCastPhase.FAILED, message = t.message ?: "Could not start the casting service.") }
+            }
+        } else {
+            AppState.nativeCast { it.copy(phase = NativeCastPhase.FAILED, message = "Screen sharing was cancelled.") }
         }
     }
     private val browserProjection = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -160,7 +167,11 @@ class MainActivity : ComponentActivity() {
             else AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
             launchBrowserProjection()
         }
-        if (requestCode == 44) launchNativeProjection()
+        if (requestCode == 44) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) AppState.audio { it.copy(status = "Audio: Initializing") }
+            else AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
+            launchNativeProjection()
+        }
     }
 
     private fun launchBrowserProjection() {
@@ -182,13 +193,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchNativeProjection() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && AppState.audio.value.enabled && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && !nativeAudioPermissionRequested) {
-            nativeAudioPermissionRequested = true
-            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 44)
-            return
+        try {
+            AppState.nativeCast { it.copy(phase = NativeCastPhase.PREPARING, message = "Approve screen sharing to continue.") }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && AppState.audio.value.enabled && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && !nativeAudioPermissionRequested) {
+                nativeAudioPermissionRequested = true
+                AppState.audio { it.copy(status = "Audio: Waiting for permission") }
+                AppState.nativeCast { it.copy(message = "Allow optional audio access, then approve screen sharing.") }
+                requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 44)
+                return
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && AppState.audio.value.enabled && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
+            projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent())
+        } catch (t: Throwable) {
+            AppState.nativeCast { it.copy(phase = NativeCastPhase.FAILED, message = t.message ?: "Could not start screen sharing.") }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && AppState.audio.value.enabled && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) AppState.audio { it.copy(status = "Audio: Unavailable — permission denied; video only") }
-        projection.launch((getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent())
     }
 
     @Composable
@@ -205,10 +223,11 @@ class MainActivity : ComponentActivity() {
         var manual by remember { mutableStateOf(false) }
         var qualityOpen by remember { mutableStateOf(false) }
         var receiverFullscreen by rememberSaveable { mutableStateOf(false) }
-        var nativeLowLatency by rememberSaveable { mutableStateOf(languagePrefs.getBoolean(PREF_NATIVE_LOW_LATENCY, false)) }
+        var nativeLowLatency by rememberSaveable { mutableStateOf(languagePrefs.getBoolean(PREF_NATIVE_LOW_LATENCY, true)) }
         val browserState by AppState.browser.collectAsStateWithLifecycle()
         val receiverState by AppState.receiver.collectAsStateWithLifecycle()
         val nativeReceiver by AppState.nativeReceiver.collectAsStateWithLifecycle()
+        val nativeCast by AppState.nativeCast.collectAsStateWithLifecycle()
         val diagnostics by AppState.diagnostics.collectAsStateWithLifecycle()
         val debug by AppState.debug.collectAsStateWithLifecycle()
         val audio by AppState.audio.collectAsStateWithLifecycle()
@@ -221,9 +240,9 @@ class MainActivity : ComponentActivity() {
             else insetsController.show(WindowInsetsCompat.Type.systemBars())
         }
 
-        LaunchedEffect(browserState.status, receiverState.active) {
+        LaunchedEffect(browserState.status, receiverState.active, nativeCast.phase) {
             MonetizationManager.setCastingActive(
-                browserState.status in setOf(BrowserStatus.STARTING, BrowserStatus.WAITING_FOR_BROWSER, BrowserStatus.APPROVAL_REQUIRED, BrowserStatus.NEGOTIATING, BrowserStatus.CONNECTED) || receiverState.active
+                browserState.status in setOf(BrowserStatus.STARTING, BrowserStatus.WAITING_FOR_BROWSER, BrowserStatus.APPROVAL_REQUIRED, BrowserStatus.NEGOTIATING, BrowserStatus.CONNECTED) || receiverState.active || nativeCast.phase in setOf(NativeCastPhase.PREPARING, NativeCastPhase.CONNECTING, NativeCastPhase.WAITING_FOR_APPROVAL, NativeCastPhase.STARTING_STREAM, NativeCastPhase.NEGOTIATING, NativeCastPhase.CONNECTED)
             )
         }
 
@@ -261,6 +280,7 @@ class MainActivity : ComponentActivity() {
                             localGranted = localGranted,
                             scanning = scanning,
                             receivers = receivers,
+                            nativeCast = nativeCast,
                             lowLatency = nativeLowLatency,
                             onLowLatencyChange = { enabled ->
                                 nativeLowLatency = enabled
@@ -275,6 +295,8 @@ class MainActivity : ComponentActivity() {
                                 } else requestLocalNetwork()
                             },
                             onSelectReceiver = { showPin = it },
+                            onStopNativeCast = { startService(Intent(this@MainActivity, NativeWebRtcSenderService::class.java).setAction(NativeWebRtcSenderService.ACTION_STOP)) },
+                            onDismissNativeCast = { AppState.resetNativeCast() },
                             onManualConnect = { manual = true },
                             onSystemCast = { startActivity(Intent(Settings.ACTION_CAST_SETTINGS)) },
                             showIdleAd = monetization.adsReady && !monetization.castingActive
@@ -341,6 +363,7 @@ class MainActivity : ComponentActivity() {
                         onClick = {
                             selected = showPin
                             selectedPin = pin
+                            AppState.nativeCast { NativeCastUiState(phase = NativeCastPhase.PREPARING, receiverName = showPin?.name, message = "Preparing secure connection…") }
                             showPin = null
                             launchNativeProjection()
                         }
@@ -356,6 +379,7 @@ class MainActivity : ComponentActivity() {
                 onConnect = { host, port, code ->
                     selected = DiscoveredReceiver("Manual receiver", java.net.InetAddress.getByName(host), port)
                     selectedPin = code
+                    AppState.nativeCast { NativeCastUiState(phase = NativeCastPhase.PREPARING, receiverName = "Manual receiver", message = "Preparing secure connection…") }
                     manual = false
                     launchNativeProjection()
                 }
@@ -403,12 +427,15 @@ class MainActivity : ComponentActivity() {
         localGranted: Boolean,
         scanning: Boolean,
         receivers: List<DiscoveredReceiver>,
+        nativeCast: NativeCastUiState,
         lowLatency: Boolean,
         onLowLatencyChange: (Boolean) -> Unit,
         modifier: Modifier,
         onRequestAccess: () -> Unit,
         onScan: () -> Unit,
         onSelectReceiver: (DiscoveredReceiver) -> Unit,
+        onStopNativeCast: () -> Unit,
+        onDismissNativeCast: () -> Unit,
         onManualConnect: () -> Unit,
         onSystemCast: () -> Unit,
         showIdleAd: Boolean
@@ -418,6 +445,22 @@ class MainActivity : ComponentActivity() {
                 title = A("Find your display"),
                 subtitle = A("Securely mirror to a nearby screen on your local network.")
             )
+
+            if (nativeCast.phase != NativeCastPhase.IDLE) {
+                SurfaceCard {
+                    val failed = nativeCast.phase == NativeCastPhase.FAILED
+                    val connected = nativeCast.phase == NativeCastPhase.CONNECTED
+                    val cancelled = nativeCast.message?.contains("cancelled", ignoreCase = true) == true
+                    StatusBadge(A(when { failed -> "NEEDS ATTENTION"; connected -> "CASTING"; else -> "CONNECTING" }), if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, if (failed) CarCastPalette.errorSurface else CarCastPalette.accentSoft)
+                    Text(A(when { cancelled -> "Screen sharing cancelled"; failed -> "Couldn’t start casting"; connected -> "Casting to ${nativeCast.receiverName ?: "receiver"}"; else -> "Connecting to ${nativeCast.receiverName ?: "receiver"}" }), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+                    Text(A(nativeCast.message ?: "Preparing the connection…"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (failed) {
+                        OutlinedButton(onClick = onDismissNativeCast, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text(A("Dismiss")) }
+                    } else {
+                        OutlinedButton(onClick = onStopNativeCast, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text(A(if (connected) "Stop casting" else "Cancel")) }
+                    }
+                }
+            }
 
             SurfaceCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -544,6 +587,18 @@ class MainActivity : ComponentActivity() {
     private fun ReceiveScreen(receiverState: ReceiverUiState, nativeReceiver: NativeReceiverMetrics, localGranted: Boolean, modifier: Modifier, onToggleFullscreen: () -> Unit, onStart: () -> Unit, onApprove: () -> Unit, onDecline: () -> Unit, onStop: () -> Unit) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PageHeading(receiverState.friendlyName, A("Ready to receive from a nearby CarCast phone."))
+            if (receiverState.pendingSender != null) {
+                SurfaceCard {
+                    StatusBadge(A("APPROVAL REQUIRED"), MaterialTheme.colorScheme.tertiary, CarCastPalette.warningSurface)
+                    Text(A("${receiverState.pendingSender} wants to cast"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(A("Confirm that both screens show the same verification code:"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(receiverState.pendingSas?.chunked(3)?.joinToString(" ") ?: "------", style = MaterialTheme.typography.headlineMedium, letterSpacing = 3.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = onApprove, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("CONNECT")) }
+                        OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("DECLINE")) }
+                    }
+                }
+            }
             SurfaceCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(A("CarCast Receiver"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -593,18 +648,7 @@ class MainActivity : ComponentActivity() {
                     ) { Text(A("Full screen")) }
                 }
             }
-            if (receiverState.pendingSender != null) {
-                SurfaceCard {
-                    StatusBadge(A("APPROVAL REQUIRED"), MaterialTheme.colorScheme.tertiary, CarCastPalette.warningSurface)
-                    Text(A("${receiverState.pendingSender} wants to cast"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text(A("Confirm that both screens show the same verification code:"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(receiverState.pendingSas?.chunked(3)?.joinToString(" ") ?: "------", style = MaterialTheme.typography.headlineMedium, letterSpacing = 3.sp, fontWeight = FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                        Button(onClick = onApprove, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("CONNECT")) }
-                        OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("DECLINE")) }
-                    }
-                }
-            } else if (!receiverState.active || receiverState.status == "Stopped" || receiverState.status == "Failed") {
+            if (receiverState.pendingSender == null && (!receiverState.active || receiverState.status == "Stopped" || receiverState.status == "Failed")) {
                 Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp)) { Text(A("Start receiver"), fontWeight = FontWeight.SemiBold) }
             } else if (receiverState.status == "Connected") {
                 Text(A("Connected · ${nativeReceiver.audioTrackStatus}"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
